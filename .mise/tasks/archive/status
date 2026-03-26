@@ -1,0 +1,62 @@
+#!/usr/bin/env -S uv run --script
+#MISE description="Check MAM (Message Archive Management) status"
+# /// script
+# dependencies = ["slixmpp>=1.8"]
+# ///
+
+import asyncio
+import os
+import sys
+from xml.etree import ElementTree as ET
+
+sys.path.insert(0, os.environ["MISE_CONFIG_ROOT"] + "/lib")
+from xmpp import SMSClient
+
+jid = os.environ.get("SMS_JID", "")
+password = os.environ.get("SMS_PASSWORD", "")
+
+if not jid or not password:
+    print("SMS_JID and SMS_PASSWORD must be set")
+    sys.exit(1)
+
+
+async def check_status():
+    client = SMSClient(jid, password)
+    done = asyncio.get_event_loop().create_future()
+
+    async def on_start(event):
+        try:
+            # Check preference
+            iq = client.make_iq_get(ito=None)
+            ET.SubElement(iq.xml, "{urn:xmpp:mam:2}prefs")
+            result = await iq.send()
+            prefs = result.xml.find("{urn:xmpp:mam:2}prefs")
+            default = prefs.get("default", "unknown") if prefs is not None else "unknown"
+
+            # Check archive metadata
+            meta = await client.plugin["xep_0313"].get_archive_metadata()
+            meta_el = meta.xml.find("{urn:xmpp:mam:2}metadata")
+            start_el = meta_el.find("{urn:xmpp:mam:2}start") if meta_el is not None else None
+            end_el = meta_el.find("{urn:xmpp:mam:2}end") if meta_el is not None else None
+
+            print(f"Archiving: {default}")
+            if start_el is not None:
+                print(f"Oldest:    {start_el.get('timestamp', 'unknown')}")
+            if end_el is not None:
+                print(f"Newest:    {end_el.get('timestamp', 'unknown')}")
+            if start_el is None and end_el is None:
+                print("Archive:   empty")
+        except Exception as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+        finally:
+            if not done.done():
+                done.set_result(True)
+
+    client.add_event_handler("session_start", on_start)
+    client.connect()
+    await asyncio.wait_for(done, timeout=10)
+    client.disconnect()
+
+
+asyncio.run(check_status())

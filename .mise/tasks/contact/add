@@ -1,0 +1,30 @@
+#!/usr/bin/env -S uv run --script
+#MISE description="Add a contact to the XMPP roster"
+#USAGE arg "<jid>" help="Jabber ID to add (e.g. user@server.com)"
+# /// script
+# dependencies = ["slixmpp>=1.8"]
+# ///
+
+import asyncio
+import os
+import sys
+
+sys.path.insert(0, os.environ["MISE_CONFIG_ROOT"] + "/lib")
+from xmpp import add_contact
+
+jid = os.environ.get("SMS_JID", "")
+password = os.environ.get("SMS_PASSWORD", "")
+
+if not jid or not password:
+    print("SMS_JID and SMS_PASSWORD must be set")
+    sys.exit(1)
+
+contact_jid = os.environ["usage_jid"]
+
+ok = asyncio.run(add_contact(jid, password, contact_jid))
+
+if ok:
+    print(f"Added {contact_jid}")
+else:
+    print(f"Failed to add {contact_jid}")
+    sys.exit(1)

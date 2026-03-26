@@ -1,0 +1,31 @@
+#!/usr/bin/env -S uv run --script
+#MISE description="Listen for incoming messages in real-time"
+#USAGE flag "--timeout <timeout>" default="60" help="Seconds to listen before exiting (0 for indefinite)"
+# /// script
+# dependencies = ["slixmpp>=1.8"]
+# ///
+
+import asyncio
+import os
+import sys
+
+sys.path.insert(0, os.environ["MISE_CONFIG_ROOT"] + "/lib")
+from xmpp import listen_messages
+
+jid = os.environ.get("SMS_JID", "")
+password = os.environ.get("SMS_PASSWORD", "")
+
+if not jid or not password:
+    print("SMS_JID and SMS_PASSWORD must be set")
+    sys.exit(1)
+
+timeout = int(os.environ.get("usage_timeout", "60"))
+
+def on_message(msg):
+    ts = msg.get("timestamp", "")
+    prefix = f"[{ts}] " if ts else ""
+    print(f"{prefix}{msg['from']}")
+    print(f"  {msg['body']}")
+    print(flush=True)
+
+asyncio.run(listen_messages(jid, password, callback=on_message, timeout=timeout))
