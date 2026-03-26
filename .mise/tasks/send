@@ -1,6 +1,6 @@
 #!/usr/bin/env -S uv run --script
 #MISE description="Send an SMS message"
-#USAGE arg "<number>" help="Phone number to send to (e.g. +19195551234)"
+#USAGE arg "<destination>" help="Phone number (e.g. +19195551234) or XMPP JID (e.g. user@server.com)"
 #USAGE arg "<message>" help="Message text to send"
 # /// script
 # dependencies = ["slixmpp>=1.8"]
@@ -11,7 +11,7 @@ import os
 import sys
 
 sys.path.insert(0, os.environ["MISE_CONFIG_ROOT"] + "/lib")
-from xmpp import send_sms, normalize_number
+from xmpp import send_sms, normalize_number, is_jid
 
 jid = os.environ.get("SMS_JID", "")
 password = os.environ.get("SMS_PASSWORD", "")
@@ -20,14 +20,16 @@ if not jid or not password:
     print("SMS_JID and SMS_PASSWORD must be set")
     sys.exit(1)
 
-number = os.environ["usage_number"]
+destination = os.environ["usage_destination"]
 message = os.environ["usage_message"]
 
-ok = asyncio.run(send_sms(jid, password, number, message))
+ok = asyncio.run(send_sms(jid, password, destination, message))
 
 if ok:
-    normalized = normalize_number(number)
-    print(f"Sent to {normalized}")
+    if is_jid(destination):
+        print(f"Sent to {destination}")
+    else:
+        print(f"Sent to {normalize_number(destination)}")
 else:
     print("Failed to send message")
     sys.exit(1)

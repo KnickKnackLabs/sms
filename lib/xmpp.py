@@ -62,9 +62,11 @@ async def send_sms(jid, password, to_number, message):
     sent = asyncio.get_event_loop().create_future()
 
     def on_session_start(event):
-        # jmp.chat gateway address for SMS
-        sms_jid = normalize_number(to_number) + "@cheogram.com"
-        client.send_message(mto=sms_jid, mbody=message, mtype="chat")
+        if is_jid(to_number):
+            dest_jid = to_number
+        else:
+            dest_jid = normalize_number(to_number) + "@cheogram.com"
+        client.send_message(mto=dest_jid, mbody=message, mtype="chat")
         sent.set_result(True)
 
     client.add_event_handler("session_start", on_session_start)
@@ -223,6 +225,11 @@ async def listen_messages(jid, password, callback, timeout=60):
         pass
     finally:
         client.disconnect()
+
+
+def is_jid(value):
+    """Check if a value looks like an XMPP JID rather than a phone number."""
+    return any(c.isalpha() for c in value)
 
 
 def normalize_number(number):
