@@ -1,0 +1,32 @@
+#!/usr/bin/env -S uv run --script
+#MISE description="Check SMS connectivity and account status"
+# /// script
+# dependencies = ["slixmpp>=1.8"]
+# ///
+
+import asyncio
+import os
+import sys
+
+sys.path.insert(0, os.environ["MISE_CONFIG_ROOT"] + "/lib")
+from xmpp import check_connection
+
+jid = os.environ.get("SMS_JID", "")
+password = os.environ.get("SMS_PASSWORD", "")
+
+if not jid or not password:
+    print("SMS_JID and SMS_PASSWORD must be set")
+    print("Store credentials via: secrets set sms/jid <value>")
+    print("                       secrets set sms/password <value>")
+    sys.exit(1)
+
+print(f"JID: {jid}")
+print("Connecting...", end=" ", flush=True)
+
+ok = asyncio.run(check_connection(jid, password))
+
+if ok:
+    print("OK")
+else:
+    print("FAILED")
+    sys.exit(1)

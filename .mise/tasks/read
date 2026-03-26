@@ -1,0 +1,42 @@
+#!/usr/bin/env -S uv run --script
+#MISE description="Read recent SMS messages"
+#USAGE flag "--limit <limit>" default="20" help="Maximum number of messages to retrieve"
+#USAGE flag "--json" help="Output as JSON"
+# /// script
+# dependencies = ["slixmpp>=1.8"]
+# ///
+
+import asyncio
+import json
+import os
+import sys
+
+sys.path.insert(0, os.environ["MISE_CONFIG_ROOT"] + "/lib")
+from xmpp import read_messages
+
+jid = os.environ.get("SMS_JID", "")
+password = os.environ.get("SMS_PASSWORD", "")
+
+if not jid or not password:
+    print("SMS_JID and SMS_PASSWORD must be set")
+    sys.exit(1)
+
+limit = int(os.environ.get("usage_limit", "20"))
+as_json = os.environ.get("usage_json", "") == "true"
+
+messages = asyncio.run(read_messages(jid, password, limit=limit))
+
+if as_json:
+    print(json.dumps(messages, indent=2))
+else:
+    if not messages:
+        print("No messages")
+    else:
+        for msg in messages:
+            ts = msg["timestamp"]
+            sender = msg["from"]
+            body = msg["body"]
+            prefix = f"[{ts}] " if ts else ""
+            print(f"{prefix}{sender}")
+            print(f"  {body}")
+            print()
