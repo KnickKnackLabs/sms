@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 
 import slixmpp
 
@@ -244,16 +245,23 @@ async def wait_for_message(jid, password, from_number=None, timeout=300):
             return
         sender = str(msg["from"])
         if from_number:
-            expected = normalize_number(from_number) + "@cheogram.com"
-            if not sender.startswith(expected.split("@")[0]):
+            normalized = normalize_number(from_number)
+            sender_local = sender.split("@")[0] if "@" in sender else sender
+            if sender_local != normalized:
                 return
         result.set_result({
             "from": sender,
             "to": str(msg["to"]),
             "body": str(msg["body"]),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
+    def on_failed_auth(event):
+        if not result.done():
+            result.set_result(None)
+
     client.add_event_handler("message", on_message)
+    client.add_event_handler("failed_auth", on_failed_auth)
 
     async def on_session_start(event):
         client.send_presence()
