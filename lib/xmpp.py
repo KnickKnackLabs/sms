@@ -232,6 +232,46 @@ async def listen_messages(jid, password, callback, timeout=60):
         client.disconnect()
 
 
+async def wait_for_message(jid, password, from_number=None, timeout=300):
+    """Wait for a single incoming message, optionally filtered by sender."""
+    client = SMSClient(jid, password)
+    result = asyncio.get_event_loop().create_future()
+
+    def on_message(msg):
+        if result.done():
+            return
+        if msg["type"] not in ("chat", "normal") or not msg["body"]:
+            return
+        sender = str(msg["from"])
+        if from_number:
+            expected = normalize_number(from_number) + "@cheogram.com"
+            if not sender.startswith(expected.split("@")[0]):
+                return
+        result.set_result({
+            "from": sender,
+            "to": str(msg["to"]),
+            "body": str(msg["body"]),
+        })
+
+    client.add_event_handler("message", on_message)
+
+    async def on_session_start(event):
+        client.send_presence()
+        await client.get_roster()
+
+    client.add_event_handler("session_start", on_session_start)
+
+    client.connect()
+
+    try:
+        msg = await asyncio.wait_for(result, timeout=timeout)
+        return msg
+    except asyncio.TimeoutError:
+        return None
+    finally:
+        client.disconnect()
+
+
 def is_jid(value):
     """Check if a value looks like an XMPP JID rather than a phone number."""
     return any(c.isalpha() for c in value)

@@ -1,0 +1,39 @@
+#!/usr/bin/env -S uv run --script
+#MISE description="Wait for a new SMS message"
+#USAGE flag "--from <from>" help="Only wait for messages from this number"
+#USAGE flag "--timeout <timeout>" default="300" help="Seconds to wait before giving up (default 5 minutes)"
+#USAGE flag "--json" help="Output as JSON"
+# /// script
+# dependencies = ["slixmpp>=1.8"]
+# ///
+
+import asyncio
+import json
+import os
+import sys
+
+sys.path.insert(0, os.environ["MISE_CONFIG_ROOT"] + "/lib")
+from xmpp import wait_for_message
+
+jid = os.environ.get("SMS_JID", "")
+password = os.environ.get("SMS_PASSWORD", "")
+
+if not jid or not password:
+    print("SMS_JID and SMS_PASSWORD must be set")
+    sys.exit(1)
+
+from_number = os.environ.get("usage_from", "")
+timeout = int(os.environ.get("usage_timeout", "300"))
+as_json = os.environ.get("usage_json") == "true"
+
+msg = asyncio.run(wait_for_message(jid, password, from_number=from_number or None, timeout=timeout))
+
+if msg is None:
+    print("Timed out waiting for message")
+    sys.exit(1)
+
+if as_json:
+    print(json.dumps(msg))
+else:
+    print(f"{msg['from']}")
+    print(f"  {msg['body']}")
