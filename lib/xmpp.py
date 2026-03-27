@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 
 import slixmpp
 
@@ -91,21 +92,26 @@ async def read_messages(jid, password, limit=20):
 
     async def on_session_start(event):
         try:
-            results = client.plugin["xep_0313"]
-            iq = await results.retrieve(rsm={"max": limit, "before": ""})
-
-            for msg in iq["mam"]["results"]:
-                forwarded = msg["mam_result"]["forwarded"]
-                message = forwarded["stanza"]
-                delay = forwarded["delay"]
-                body = message["body"]
-                if body:
-                    messages.append({
-                        "from": str(message["from"]),
-                        "to": str(message["to"]),
-                        "body": str(body),
-                        "timestamp": str(delay["stamp"]) if delay["stamp"] else "",
-                    })
+            mam = client.plugin["xep_0313"]
+            iterator = mam.retrieve(
+                rsm={"max": limit},
+                iterator=True,
+                reverse=True,
+            )
+            async for page in iterator:
+                for msg in page["mam"]["results"]:
+                    forwarded = msg["mam_result"]["forwarded"]
+                    message = forwarded["stanza"]
+                    delay = forwarded["delay"]
+                    body = message["body"]
+                    if body:
+                        messages.append({
+                            "from": str(message["from"]),
+                            "to": str(message["to"]),
+                            "body": str(body),
+                            "timestamp": str(delay["stamp"]) if delay["stamp"] else "",
+                        })
+                break  # only need the last page
         except Exception as e:
             log.error("Failed to retrieve messages: %s", e)
         finally:
@@ -223,6 +229,53 @@ async def listen_messages(jid, password, callback, timeout=60):
             await asyncio.Future()  # block forever
     except (KeyboardInterrupt, asyncio.CancelledError):
         pass
+    finally:
+        client.disconnect()
+
+
+async def wait_for_message(jid, password, from_number=None, timeout=300):
+    """Wait for a single incoming message, optionally filtered by sender."""
+    client = SMSClient(jid, password)
+    result = asyncio.get_event_loop().create_future()
+
+    def on_message(msg):
+        if result.done():
+            return
+        if msg["type"] not in ("chat", "normal") or not msg["body"]:
+            return
+        sender = str(msg["from"])
+        if from_number:
+            normalized = normalize_number(from_number)
+            sender_local = sender.split("@")[0] if "@" in sender else sender
+            if sender_local != normalized:
+                return
+        result.set_result({
+            "from": sender,
+            "to": str(msg["to"]),
+            "body": str(msg["body"]),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+
+    def on_failed_auth(event):
+        if not result.done():
+            result.set_result(None)
+
+    client.add_event_handler("message", on_message)
+    client.add_event_handler("failed_auth", on_failed_auth)
+
+    async def on_session_start(event):
+        client.send_presence()
+        await client.get_roster()
+
+    client.add_event_handler("session_start", on_session_start)
+
+    client.connect()
+
+    try:
+        msg = await asyncio.wait_for(result, timeout=timeout)
+        return msg
+    except asyncio.TimeoutError:
+        return None
     finally:
         client.disconnect()
 

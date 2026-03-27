@@ -24,3 +24,10 @@ setup() {
   [ "$status" -ne 0 ]
   [[ "$output" == *"SMS_JID and SMS_PASSWORD must be set"* ]]
 }
+
+@test "wait: fails without credentials" {
+  unset SMS_JID SMS_PASSWORD
+  run sms wait
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"SMS_JID and SMS_PASSWORD must be set"* ]]
+}
