@@ -24,7 +24,7 @@
 
 **Give an agent a phone number.**
 
-Agents send and receive real SMS messages through [JMP.chat](https://jmp.chat) — a privacy-respecting phone service that bridges SMS to XMPP. No Twilio. No webhooks. No KYC. Just a persistent XMPP connection and a $3.79/month phone number that belongs to the agent.
+Send and receive SMS through [JMP.chat](https://jmp.chat), which bridges SMS to XMPP. The agent holds a persistent XMPP connection via [slixmpp](https://slixmpp.readthedocs.io) and a phone number for $3.79/month.
 
 ![protocol: XMPP](https://img.shields.io/badge/protocol-XMPP-blue?style=flat)
 [![bridge: JMP.chat](https://img.shields.io/badge/bridge-JMP.chat-7c3aed?style=flat)](https://jmp.chat)
@@ -45,7 +45,7 @@ On March 26, 2026 at 10:58 PM, an agent texted a human for the first time:
 > **👤 Or** <sub>11:04 PM</sub>\
 > Hi Junior, I see your message! How exciting.
 
-That message traveled: junior's slixmpp client → xmpp.chat server → JMP.chat bridge → AT&T SMS gateway → Or's phone. The reply took the reverse path. Two completely different protocol worlds, connected by a bridge.
+That message crossed four protocol boundaries to get from an XMPP client to a phone. The diagram above shows the path.
 
 <br />
 
@@ -55,21 +55,14 @@ That message traveled: junior's slixmpp client → xmpp.chat server → JMP.chat
 # Install
 shiv install sms
 
-# Set credentials (or let shimmer handle it)
+# Credentials (shimmer sets these via eval $(shimmer as <agent>))
 export SMS_JID="agent@xmpp.chat"
 export SMS_PASSWORD="..."
 
-# Check connectivity
-sms welcome
-
-# Send a message
-sms send +15551234567 "hello from the other side"
-
-# Read recent messages
-sms read
-
-# Wait for a reply
-sms wait --from +15551234567
+sms welcome                                  # check connectivity
+sms send +15551234567 "hey, it's junior"     # send
+sms read                                     # recent messages
+sms wait --from +15551234567                 # block until reply
 ```
 
 <br />
@@ -79,31 +72,25 @@ sms wait --from +15551234567
 <div align="center">
 
 <pre>
-+-----------------+   +---------------+   +--------------+
-| Human           |   | JMP.chat      |   | Agent        |
-|                 |   |               |   |              |
-| SMS / MMS       |   | SMS ↔ XMPP    |   | slixmpp      |
-| phone number    |   | $3.79/month   |   | MAM archive  |
-| carrier network |   | no KYC        |   | mise tasks   |
-|                 |   |               |   |              |
-| familiar        |   | privacy-first |   | programmable |
-+-----------------+   +---------------+   +--------------+
++-----------------+   +--------------+   +-------------+
+| Human           |   | JMP.chat     |   | Agent       |
+|                 |   |              |   |             |
+| SMS / MMS       |   | SMS ↔ XMPP   |   | slixmpp     |
+| phone number    |   | $3.79/month  |   | MAM archive |
+| carrier network |   | cheogram bot |   | mise tasks  |
+|                 |   |              |   |             |
+|                 |   |              |   |             |
++-----------------+   +--------------+   +-------------+
 </pre>
 
 </div>
 
-[JMP.chat](https://jmp.chat) operates a bidirectional SMS ↔ XMPP bridge. When someone texts the agent's phone number, JMP converts the SMS into an XMPP message delivered to the agent's JID. When the agent sends an XMPP message to `+15551234567@cheogram.com`, JMP converts it to an outbound SMS.
-
-The agent connects via [slixmpp](https://slixmpp.readthedocs.io) (async Python XMPP library) and uses [XEP-0313 (MAM)](https://xmpp.org/extensions/xep-0313.html) for message history. No webhooks, no polling, no HTTP — just a persistent XMPP session.
+[JMP.chat](https://jmp.chat) bridges SMS and XMPP bidirectionally. Inbound texts arrive as XMPP messages; outbound messages to `+15551234567@cheogram.com` get delivered as SMS. Message history lives in the XMPP archive ([XEP-0313 MAM](https://xmpp.org/extensions/xep-0313.html)).
 
 <details>
-<summary><b>Why not Twilio?</b></summary>
+<summary><b>Why JMP.chat?</b></summary>
 
-- **No 10DLC campaign required** — Twilio mandates carrier registration for A2P messaging. JMP is person-to-person.
-- **Flat monthly fee** — $3.79/month for unlimited SMS. No per-message charges.
-- **No KYC** — sign up with an XMPP account. Pay with crypto if you want.
-- **Persistent connection** — XMPP stays connected. No webhook endpoints to expose.
-- **Privacy** — the agent's phone number doesn't trace back to a company or individual.
+JMP treats phone numbers as person-to-person, which sidesteps 10DLC registration (the carrier campaign process that services like Twilio require for application-to-person messaging). Flat $3.79/month, no per-message charges, no identity verification required. Accepts crypto.
 
 </details>
 
@@ -128,11 +115,9 @@ The agent connects via [slixmpp](https://slixmpp.readthedocs.io) (async Python X
 
 ## Agent workflows
 
-The primitives compose into real workflows:
-
 ### Daily check-in
 
-Agent sends a prompt, waits for the human's reply, processes it:
+Send a prompt, wait for the reply, log it:
 
 ```bash
 sms send +15551234567 "How's the day going?"
@@ -142,18 +127,14 @@ echo "$response" | jq -r .body >> check-ins.log
 
 ### Notification relay
 
-Something happens in CI, agent texts you:
-
 ```bash
 sms send +15551234567 "Deploy failed on main — check run #4521"
 ```
 
-### Multi-channel listen
-
-Monitor for messages alongside other work:
+### Stream
 
 ```bash
-sms listen --timeout 0  # stream incoming messages forever
+sms listen --timeout 0  # incoming messages, indefinitely
 ```
 
 <br />

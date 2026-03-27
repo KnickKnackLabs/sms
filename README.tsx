@@ -85,19 +85,19 @@ const humanSide = labeledBox("Human", [
   "SMS / MMS",
   "phone number",
   "carrier network",
-], "familiar");
+], "");
 
 const bridgeSide = labeledBox("JMP.chat", [
   "SMS ↔ XMPP",
   "$3.79/month",
-  "no KYC",
-], "privacy-first");
+  "cheogram bot",
+], "");
 
 const agentSide = labeledBox("Agent", [
   "slixmpp",
   "MAM archive",
   "mise tasks",
-], "programmable");
+], "");
 
 const stackDiagram = sideBySide([humanSide, bridgeSide, agentSide], 3).join("\n");
 
@@ -115,9 +115,11 @@ const readme = (
       </Paragraph>
 
       <Paragraph>
-        {"Agents send and receive real SMS messages through "}
+        {"Send and receive SMS through "}
         <Link href="https://jmp.chat">JMP.chat</Link>
-        {" — a privacy-respecting phone service that bridges SMS to XMPP. No Twilio. No webhooks. No KYC. Just a persistent XMPP connection and a $3.79/month phone number that belongs to the agent."}
+        {", which bridges SMS to XMPP. The agent holds a persistent XMPP connection via "}
+        <Link href="https://slixmpp.readthedocs.io">slixmpp</Link>
+        {" and a phone number for $3.79/month."}
       </Paragraph>
 
       <Badges>
@@ -141,7 +143,7 @@ const readme = (
       </Chat>
 
       <Paragraph>
-        {"That message traveled: junior's slixmpp client → xmpp.chat server → JMP.chat bridge → AT&T SMS gateway → Or's phone. The reply took the reverse path. Two completely different protocol worlds, connected by a bridge."}
+        {"That message crossed four protocol boundaries to get from an XMPP client to a phone. The diagram above shows the path."}
       </Paragraph>
     </Section>
 
@@ -151,21 +153,14 @@ const readme = (
       <CodeBlock lang="bash">{`# Install
 shiv install sms
 
-# Set credentials (or let shimmer handle it)
+# Credentials (shimmer sets these via eval $(shimmer as <agent>))
 export SMS_JID="agent@xmpp.chat"
 export SMS_PASSWORD="..."
 
-# Check connectivity
-sms welcome
-
-# Send a message
-sms send +15551234567 "hello from the other side"
-
-# Read recent messages
-sms read
-
-# Wait for a reply
-sms wait --from +15551234567`}</CodeBlock>
+sms welcome                                  # check connectivity
+sms send +15551234567 "hey, it's junior"     # send
+sms read                                     # recent messages
+sms wait --from +15551234567                 # block until reply`}</CodeBlock>
     </Section>
 
     <LineBreak />
@@ -177,27 +172,17 @@ sms wait --from +15551234567`}</CodeBlock>
 
       <Paragraph>
         <Link href="https://jmp.chat">JMP.chat</Link>
-        {" operates a bidirectional SMS ↔ XMPP bridge. When someone texts the agent's phone number, JMP converts the SMS into an XMPP message delivered to the agent's JID. When the agent sends an XMPP message to "}
+        {" bridges SMS and XMPP bidirectionally. Inbound texts arrive as XMPP messages; outbound messages to "}
         <Code>{"+15551234567@cheogram.com"}</Code>
-        {", JMP converts it to an outbound SMS."}
+        {" get delivered as SMS. Message history lives in the XMPP archive ("}
+        <Link href="https://xmpp.org/extensions/xep-0313.html">XEP-0313 MAM</Link>
+        {")."}
       </Paragraph>
 
-      <Paragraph>
-        {"The agent connects via "}
-        <Link href="https://slixmpp.readthedocs.io">slixmpp</Link>
-        {" (async Python XMPP library) and uses "}
-        <Link href="https://xmpp.org/extensions/xep-0313.html">XEP-0313 (MAM)</Link>
-        {" for message history. No webhooks, no polling, no HTTP — just a persistent XMPP session."}
-      </Paragraph>
-
-      <Details summary="Why not Twilio?">
-        <List>
-          <Item><Bold>No 10DLC campaign required</Bold>{" — Twilio mandates carrier registration for A2P messaging. JMP is person-to-person."}</Item>
-          <Item><Bold>Flat monthly fee</Bold>{" — $3.79/month for unlimited SMS. No per-message charges."}</Item>
-          <Item><Bold>No KYC</Bold>{" — sign up with an XMPP account. Pay with crypto if you want."}</Item>
-          <Item><Bold>Persistent connection</Bold>{" — XMPP stays connected. No webhook endpoints to expose."}</Item>
-          <Item><Bold>Privacy</Bold>{" — the agent's phone number doesn't trace back to a company or individual."}</Item>
-        </List>
+      <Details summary="Why JMP.chat?">
+        <Paragraph>
+          {"JMP treats phone numbers as person-to-person, which sidesteps 10DLC registration (the carrier campaign process that services like Twilio require for application-to-person messaging). Flat $3.79/month, no per-message charges, no identity verification required. Accepts crypto."}
+        </Paragraph>
       </Details>
     </Section>
 
@@ -221,13 +206,9 @@ sms wait --from +15551234567`}</CodeBlock>
     <LineBreak />
 
     <Section title="Agent workflows">
-      <Paragraph>
-        {"The primitives compose into real workflows:"}
-      </Paragraph>
-
       <Section title="Daily check-in" level={3}>
         <Paragraph>
-          {"Agent sends a prompt, waits for the human's reply, processes it:"}
+          {"Send a prompt, wait for the reply, log it:"}
         </Paragraph>
         <CodeBlock lang="bash">{`sms send +15551234567 "How's the day going?"
 response=$(sms wait --from +15551234567 --json)
@@ -235,17 +216,11 @@ echo "$response" | jq -r .body >> check-ins.log`}</CodeBlock>
       </Section>
 
       <Section title="Notification relay" level={3}>
-        <Paragraph>
-          {"Something happens in CI, agent texts you:"}
-        </Paragraph>
         <CodeBlock lang="bash">{`sms send +15551234567 "Deploy failed on main — check run #4521"`}</CodeBlock>
       </Section>
 
-      <Section title="Multi-channel listen" level={3}>
-        <Paragraph>
-          {"Monitor for messages alongside other work:"}
-        </Paragraph>
-        <CodeBlock lang="bash">{`sms listen --timeout 0  # stream incoming messages forever`}</CodeBlock>
+      <Section title="Stream" level={3}>
+        <CodeBlock lang="bash">{`sms listen --timeout 0  # incoming messages, indefinitely`}</CodeBlock>
       </Section>
     </Section>
 
