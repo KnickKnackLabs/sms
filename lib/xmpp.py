@@ -91,21 +91,26 @@ async def read_messages(jid, password, limit=20):
 
     async def on_session_start(event):
         try:
-            results = client.plugin["xep_0313"]
-            iq = await results.retrieve(rsm={"max": limit, "before": ""})
-
-            for msg in iq["mam"]["results"]:
-                forwarded = msg["mam_result"]["forwarded"]
-                message = forwarded["stanza"]
-                delay = forwarded["delay"]
-                body = message["body"]
-                if body:
-                    messages.append({
-                        "from": str(message["from"]),
-                        "to": str(message["to"]),
-                        "body": str(body),
-                        "timestamp": str(delay["stamp"]) if delay["stamp"] else "",
-                    })
+            mam = client.plugin["xep_0313"]
+            iterator = mam.retrieve(
+                rsm={"max": limit},
+                iterator=True,
+                reverse=True,
+            )
+            async for page in iterator:
+                for msg in page["mam"]["results"]:
+                    forwarded = msg["mam_result"]["forwarded"]
+                    message = forwarded["stanza"]
+                    delay = forwarded["delay"]
+                    body = message["body"]
+                    if body:
+                        messages.append({
+                            "from": str(message["from"]),
+                            "to": str(message["to"]),
+                            "body": str(body),
+                            "timestamp": str(delay["stamp"]) if delay["stamp"] else "",
+                        })
+                break  # only need the last page
         except Exception as e:
             log.error("Failed to retrieve messages: %s", e)
         finally:
