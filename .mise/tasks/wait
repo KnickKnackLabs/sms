@@ -1,8 +1,8 @@
 #!/usr/bin/env -S uv run --script
 #MISE description="Wait for a new SMS message"
-#USAGE flag "--from <from>" help="Only wait for messages from this number"
+#USAGE flag "--from <from>" default="" help="Only wait for messages from this number"
 #USAGE flag "--timeout <timeout>" default="300" help="Seconds to wait before giving up (default 5 minutes)"
-#USAGE flag "--json" help="Output as JSON"
+#USAGE flag "--json" default=#false help="Output as JSON"
 # /// script
 # dependencies = ["slixmpp>=1.8"]
 # ///

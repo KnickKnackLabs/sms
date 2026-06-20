@@ -1,11 +1,7 @@
-# Tests must be run via `mise run test`
-if [ -z "${MISE_CONFIG_ROOT:-}" ]; then
-  echo "MISE_CONFIG_ROOT not set — run tests via: mise run test" >&2
-  exit 1
-fi
+# Shared fixtures for sms tests.
 
+# Run a repo task through mise so tests exercise the real task path.
 sms() {
-  local subcmd="$1"; shift
-  cd "$MISE_CONFIG_ROOT" && mise run "$subcmd" -- "$@"
+  cd "$REPO_DIR" && mise run -q "$@"
 }
 export -f sms

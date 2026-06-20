@@ -127,6 +127,9 @@ const readme = (
         <Badge label="bridge" value="JMP.chat" color="7c3aed" href="https://jmp.chat" />
         <Badge label="library" value="slixmpp" color="3776AB" href="https://slixmpp.readthedocs.io" logo="python" logoColor="white" />
         <Badge label="tests" value={`${testCount} passing`} color="brightgreen" />
+        <Badge label="lints" value="9" color="blue" />
+        <Badge label="README" value="TSX" color="f472b6" />
+        <Badge label="License" value="MIT" color="blue" href="LICENSE" />
       </Badges>
     </Center>
 
@@ -254,13 +257,20 @@ echo "$response" | jq -r .body >> check-ins.log`}</CodeBlock>
 
     <Section title="Development">
       <CodeBlock lang="bash">{`gh repo clone KnickKnackLabs/sms
-cd sms && mise trust && mise install
-mise run test`}</CodeBlock>
+cd sms
+mise trust
+mise install
+mise run test
+codebase lint "$PWD"
+readme build --check
+git diff --check`}</CodeBlock>
 
       <Paragraph>
         {`${testCount} tests using `}
         <Link href="https://github.com/bats-core/bats-core">BATS</Link>
-        {". The test suite validates task structure and error handling without requiring live XMPP credentials."}
+        {". The default test suite validates task structure and error handling without requiring live XMPP credentials. See "}
+        <Link href="CONTRIBUTING.md">CONTRIBUTING.md</Link>
+        {" for local workflow and live-network boundaries."}
       </Paragraph>
     </Section>
 
