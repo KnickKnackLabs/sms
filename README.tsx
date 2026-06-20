@@ -223,7 +223,8 @@ echo "$response" | jq -r .body >> check-ins.log`}</CodeBlock>
       </Section>
 
       <Section title="Stream" level={3}>
-        <CodeBlock lang="bash">{`sms listen --timeout 0  # incoming messages, indefinitely`}</CodeBlock>
+        <CodeBlock lang="bash">{`sms listen --timeout 0         # human-readable incoming messages, indefinitely
+sms listen --timeout 0 --json  # JSON Lines for agent/session monitors`}</CodeBlock>
       </Section>
     </Section>
 

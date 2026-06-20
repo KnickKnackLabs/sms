@@ -1,6 +1,7 @@
 #!/usr/bin/env -S uv run --script
 #MISE description="Listen for incoming messages in real-time"
 #USAGE flag "--timeout <timeout>" default="60" help="Seconds to listen before exiting (0 for indefinite)"
+#USAGE flag "--json" default=#false help="Output each message as one JSON object (JSON Lines)"
 # /// script
 # dependencies = ["slixmpp>=1.8"]
 # ///
@@ -10,6 +11,7 @@ import os
 import sys
 
 sys.path.insert(0, os.environ["MISE_CONFIG_ROOT"] + "/lib")
+from output import format_json_line, format_listen_human, listen_event, utc_timestamp
 from xmpp import listen_messages
 
 jid = os.environ.get("SMS_JID", "")
@@ -20,12 +22,16 @@ if not jid or not password:
     sys.exit(1)
 
 timeout = int(os.environ.get("usage_timeout", "60"))
+as_json = os.environ.get("usage_json", "false") == "true"
+
 
 def on_message(msg):
-    ts = msg.get("timestamp", "")
-    prefix = f"[{ts}] " if ts else ""
-    print(f"{prefix}{msg['from']}")
-    print(f"  {msg['body']}")
-    print(flush=True)
+    timestamp = utc_timestamp() if as_json else None
+    event = listen_event(msg, timestamp=timestamp)
+    if as_json:
+        print(format_json_line(event), flush=True)
+    else:
+        print(format_listen_human(event), flush=True)
+
 
 asyncio.run(listen_messages(jid, password, callback=on_message, timeout=timeout))

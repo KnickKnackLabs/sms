@@ -31,3 +31,16 @@ setup() {
   [ "$status" -ne 0 ]
   [[ "$output" == *"SMS_JID and SMS_PASSWORD must be set"* ]]
 }
+
+@test "listen: fails without credentials" {
+  unset SMS_JID SMS_PASSWORD
+  run sms listen
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"SMS_JID and SMS_PASSWORD must be set"* ]]
+}
+
+@test "listen: JSON Lines formatting preserves multiline bodies" {
+  run python3 "$REPO_DIR/test/listen_output.py"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"listen output tests passed"* ]]
+}
