@@ -44,3 +44,9 @@ setup() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"listen output tests passed"* ]]
 }
+
+@test "listen: JSON mode stdout contains JSON Lines only" {
+  run python3 "$REPO_DIR/test/listen_task.py"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"listen task tests passed"* ]]
+}
