@@ -199,7 +199,7 @@ async def add_contact(jid, password, contact_jid):
     return result
 
 
-async def listen_messages(jid, password, callback, timeout=60):
+async def listen_messages(jid, password, callback, timeout=60, announce=True):
     """Connect and listen for incoming messages in real-time."""
     client = SMSClient(jid, password)
 
@@ -216,7 +216,8 @@ async def listen_messages(jid, password, callback, timeout=60):
     async def on_session_start(event):
         client.send_presence()
         await client.get_roster()
-        print(f"Listening ({timeout}s)..." if timeout else "Listening...", flush=True)
+        if announce:
+            print(f"Listening ({timeout}s)..." if timeout else "Listening...", flush=True)
 
     client.add_event_handler("session_start", on_session_start)
 

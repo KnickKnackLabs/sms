@@ -29,7 +29,7 @@ Send and receive SMS through [JMP.chat](https://jmp.chat), which bridges SMS to 
 ![protocol: XMPP](https://img.shields.io/badge/protocol-XMPP-blue?style=flat)
 [![bridge: JMP.chat](https://img.shields.io/badge/bridge-JMP.chat-7c3aed?style=flat)](https://jmp.chat)
 [![library: slixmpp](https://img.shields.io/badge/library-slixmpp-3776AB?style=flat&logo=python&logoColor=white)](https://slixmpp.readthedocs.io)
-![tests: 6 passing](https://img.shields.io/badge/tests-6%20passing-brightgreen?style=flat)
+![tests: 7 passing](https://img.shields.io/badge/tests-7%20passing-brightgreen?style=flat)
 ![lints: 9](https://img.shields.io/badge/lints-9-blue?style=flat)
 ![README: TSX](https://img.shields.io/badge/README-TSX-f472b6?style=flat)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
@@ -177,7 +177,7 @@ readme build --check
 git diff --check
 ```
 
-6 tests using [BATS](https://github.com/bats-core/bats-core). The default test suite validates task structure and error handling without requiring live XMPP credentials. See [CONTRIBUTING.md](CONTRIBUTING.md) for local workflow and live-network boundaries.
+7 tests using [BATS](https://github.com/bats-core/bats-core). The default test suite validates task structure and error handling without requiring live XMPP credentials. See [CONTRIBUTING.md](CONTRIBUTING.md) for local workflow and live-network boundaries.
 
 <br />
 

@@ -34,4 +34,4 @@ def on_message(msg):
         print(format_listen_human(event), flush=True)
 
 
-asyncio.run(listen_messages(jid, password, callback=on_message, timeout=timeout))
+asyncio.run(listen_messages(jid, password, callback=on_message, timeout=timeout, announce=not as_json))
