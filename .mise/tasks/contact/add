@@ -1,6 +1,7 @@
 #!/usr/bin/env -S uv run --script
 #MISE description="Add a contact to the XMPP roster"
 #USAGE arg "<jid>" help="Jabber ID to add (e.g. user@server.com)"
+#USAGE example "mise run contact:add friend@example.com" header="Add an XMPP contact"
 # /// script
 # dependencies = ["slixmpp>=1.8"]
 # ///
