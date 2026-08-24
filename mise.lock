@@ -4,9 +4,27 @@
 version = "1.14.0-kkl.1"
 backend = "aqua:KnickKnackLabs/bats-core"
 
+[tools."aqua:KnickKnackLabs/bats-core"."platforms.linux-x64"]
+url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/1.14.0-kkl.1.tar.gz"
+url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/1.14.0-kkl.1"
+
+[tools."aqua:KnickKnackLabs/bats-core"."platforms.macos-arm64"]
+url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/1.14.0-kkl.1.tar.gz"
+url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/1.14.0-kkl.1"
+
 [[tools."aqua:shenwei356/rush"]]
 version = "0.9.0"
 backend = "aqua:shenwei356/rush"
+
+[tools."aqua:shenwei356/rush"."platforms.linux-x64"]
+checksum = "sha256:436d935bcd0dc263d20674201cd3e9c85059d331d8641f970e1e8958ad0af4fc"
+url = "https://github.com/shenwei356/rush/releases/download/v0.9.0/rush_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shenwei356/rush/releases/assets/391416899"
+
+[tools."aqua:shenwei356/rush"."platforms.macos-arm64"]
+checksum = "sha256:f5cd118ee7a04c70849c891e172ed1d3fb85fc5c14a7dacddb1d5c210b0f0613"
+url = "https://github.com/shenwei356/rush/releases/download/v0.9.0/rush_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shenwei356/rush/releases/assets/391416669"
 
 [[tools."shiv:codebase"]]
 version = "0.4.4"
