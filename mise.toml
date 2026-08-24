@@ -1,5 +1,4 @@
 [settings]
-lockfile = true
 quiet = true
 task_output = "interleave"
 experimental = true
