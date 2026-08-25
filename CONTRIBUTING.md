@@ -48,6 +48,11 @@ Do not commit credentials, phone-number routing changes, payment setup, or accou
 - Prefer pure helper tests or mocked boundaries for behavior that does not need a real server.
 - Use a separate, explicit integration-test path before adding local XMPP server coverage.
 
+Tests use the KKL BATS fork and Rush with four jobs across and within files.
+Keep mutable state process-local or under `$BATS_TEST_TMPDIR`,
+and unset SMS credentials before every fixture test.
+Use `mise run test --jobs 1` for serial debugging.
+
 ## README workflow
 
 Edit `README.tsx`, then regenerate and check the output:

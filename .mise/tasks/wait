@@ -3,6 +3,7 @@
 #USAGE flag "--from <from>" default="" help="Only wait for messages from this number"
 #USAGE flag "--timeout <timeout>" default="300" help="Seconds to wait before giving up (default 5 minutes)"
 #USAGE flag "--json" default=#false help="Output as JSON"
+#USAGE example "mise run wait --from +15551234567 --timeout 60 --json" header="Wait one minute for a sender"
 # /// script
 # dependencies = ["slixmpp>=1.8"]
 # ///

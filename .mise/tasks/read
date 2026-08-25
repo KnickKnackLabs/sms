@@ -2,6 +2,7 @@
 #MISE description="Read recent SMS messages"
 #USAGE flag "--limit <limit>" default="20" help="Maximum number of messages to retrieve"
 #USAGE flag "--json" default=#false help="Output as JSON"
+#USAGE example "mise run read --limit 10 --json" header="Read ten recent messages as JSON"
 # /// script
 # dependencies = ["slixmpp>=1.8"]
 # ///

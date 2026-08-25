@@ -2,6 +2,7 @@
 #MISE description="Listen for incoming messages in real-time"
 #USAGE flag "--timeout <timeout>" default="60" help="Seconds to listen before exiting (0 for indefinite)"
 #USAGE flag "--json" default=#false help="Output each message as one JSON object (JSON Lines)"
+#USAGE example "mise run listen --timeout 30 --json" header="Listen briefly and emit JSON Lines"
 # /// script
 # dependencies = ["slixmpp>=1.8"]
 # ///

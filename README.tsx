@@ -127,7 +127,7 @@ const readme = (
         <Badge label="bridge" value="JMP.chat" color="7c3aed" href="https://jmp.chat" />
         <Badge label="library" value="slixmpp" color="3776AB" href="https://slixmpp.readthedocs.io" logo="python" logoColor="white" />
         <Badge label="tests" value={`${testCount} passing`} color="brightgreen" />
-        <Badge label="lints" value="9" color="blue" />
+        <Badge label="lints" value="17" color="blue" />
         <Badge label="README" value="TSX" color="f472b6" />
         <Badge label="License" value="MIT" color="blue" href="LICENSE" />
       </Badges>
@@ -267,9 +267,11 @@ readme build --check
 git diff --check`}</CodeBlock>
 
       <Paragraph>
-        {`${testCount} tests using `}
-        <Link href="https://github.com/bats-core/bats-core">BATS</Link>
-        {". The default test suite validates task structure and error handling without requiring live XMPP credentials. See "}
+        {`${testCount} tests using the KKL `}
+        <Link href="https://github.com/KnickKnackLabs/bats-core">BATS fork</Link>
+        {" and Rush run with four jobs across and within files by default; use "}
+        <Code>mise run test --jobs 1</Code>
+        {" for serial debugging. The default suite validates task structure and error handling without requiring live XMPP credentials. See "}
         <Link href="CONTRIBUTING.md">CONTRIBUTING.md</Link>
         {" for local workflow and live-network boundaries."}
       </Paragraph>

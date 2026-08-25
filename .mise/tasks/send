@@ -2,6 +2,7 @@
 #MISE description="Send an SMS message"
 #USAGE arg "<destination>" help="Phone number (e.g. +19195551234) or XMPP JID (e.g. user@server.com)"
 #USAGE arg "<message>" help="Message text to send"
+#USAGE example "mise run send +15551234567 'Hello'" header="Send one SMS message"
 # /// script
 # dependencies = ["slixmpp>=1.8"]
 # ///
