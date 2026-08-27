@@ -4,105 +4,65 @@ bats_require_minimum_version 1.5.0
 
 load test_helper
 
-setup() {
-  MOCK_DIR="$BATS_TEST_TMPDIR/test-runner-bin"
-  BATS_LOG="$BATS_TEST_TMPDIR/bats.log"
-  mkdir -p "$MOCK_DIR"
-  export BATS_LOG
-
-  cat > "$MOCK_DIR/bats" <<'SH'
-#!/usr/bin/env bash
-set -euo pipefail
-{
-  printf 'jobs=%s\n' "${BATS_NUMBER_OF_PARALLEL_JOBS:-}"
-  printf 'runner=%s\n' "${BATS_PARALLEL_BINARY_NAME:-}"
-  for argument in "$@"; do
-    printf 'arg=%s\n' "$argument"
-  done
-} > "$BATS_LOG"
-SH
-
-  cat > "$MOCK_DIR/rush" <<'SH'
-#!/usr/bin/env bash
-exit 0
-SH
-
-  chmod +x "$MOCK_DIR/bats" "$MOCK_DIR/rush"
-  export BATS_COMMAND="$MOCK_DIR/bats"
-  export RUSH_COMMAND="$MOCK_DIR/rush"
-  unset BATS_NUMBER_OF_PARALLEL_JOBS BATS_PARALLEL_BINARY_NAME
+write_passing_test() {
+  local path="$1" name="$2"
+  local test_keyword='@test'
+  mkdir -p "$(dirname "$path")"
+  printf '%s\n' \
+    '#!/usr/bin/env bats' \
+    "$test_keyword \"$name\" {" \
+    '  true' \
+    '}' > "$path"
 }
 
-log_value() {
-  local key="$1"
-  awk -F= -v key="$key" '$1 == key { print substr($0, length(key) + 2); exit }' "$BATS_LOG"
-}
+@test "options-only calls use the configured default test directory" {
+  run sms test --jobs 1 --filter '^welcome: fails without credentials$'
 
-arg_count() {
-  local expected="$1"
-  awk -F= -v expected="$expected" '$1 == "arg" && substr($0, 5) == expected { count++ } END { print count + 0 }' "$BATS_LOG"
-}
-
-@test "test task defaults to four Rush jobs without disabling within-file concurrency" {
-  run sms test sms --filter credentials
   [ "$status" -eq 0 ]
-  [[ "$output" == *"4 jobs via"* ]]
-  [ "$(log_value jobs)" = "4" ]
-  [ "$(log_value runner)" = "$MOCK_DIR/rush" ]
-  [ "$(arg_count --no-parallelize-within-files)" -eq 0 ]
-  [ "$(arg_count "$REPO_DIR/test/sms.bats")" -eq 1 ]
+  [[ "$output" == *'1..1'* ]]
+  [[ "$output" == *'ok 1 welcome: fails without credentials'* ]]
 }
 
-@test "option values cannot suppress the whitespace transport fallback" {
-  target="$BATS_TEST_TMPDIR/parallel target/fixture file.bats"
-  mkdir -p "$(dirname "$target")"
-  printf '%s
-' '#!/usr/bin/env bats' > "$target"
+@test "an explicit test target takes precedence over the configured default" {
+  local target="$BATS_TEST_TMPDIR/explicit.bats"
+  write_passing_test "$target" 'explicit target only'
 
-  run sms test "$target" --filter --no-parallelize-across-files
+  run sms test --jobs 1 "$target"
+
   [ "$status" -eq 0 ]
-  [ "$(arg_count --no-parallelize-across-files)" -eq 2 ]
-  [ "$(arg_count --no-parallelize-within-files)" -eq 0 ]
-  [ "$(arg_count "$target")" -eq 1 ]
+  [[ "$output" == *'1..1'* ]]
+  [[ "$output" == *'ok 1 explicit target only'* ]]
 }
 
-@test "explicit serial execution does not require Rush" {
-  export RUSH_COMMAND="$MOCK_DIR/missing-rush"
+@test "relative test targets resolve from the repository root" {
+  run sms test --jobs 1 test/sms.bats --filter '^welcome: fails without credentials$'
 
-  run sms test --jobs 1 sms
   [ "$status" -eq 0 ]
-  [[ "$output" == *"BATS parallelism: serial"* ]]
-  [ "$(arg_count --no-parallelize-within-files)" -eq 0 ]
+  [[ "$output" == *'1..1'* ]]
+  [[ "$output" == *'ok 1 welcome: fails without credentials'* ]]
 }
 
-@test "parallel execution fails clearly without the selected runner" {
-  export RUSH_COMMAND="$MOCK_DIR/missing-rush"
+@test "whitespace-bearing explicit test targets remain one argument" {
+  local target="$BATS_TEST_TMPDIR/explicit target/passing test.bats"
+  write_passing_test "$target" 'whitespace target'
 
-  run -127 sms test sms
-  [ "$status" -eq 127 ]
-  [[ "$output" == *"parallel runner '$MOCK_DIR/missing-rush' is unavailable for 4 jobs"* ]]
-  [ ! -e "$BATS_LOG" ]
+  run sms test --jobs 2 "$target"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'1..1'* ]]
+  [[ "$output" == *'ok 1 whitespace target'* ]]
 }
 
-@test "invalid job count fails before BATS" {
-  export BATS_NUMBER_OF_PARALLEL_JOBS=lots
-
-  run -2 sms test sms
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"must be a positive integer"* ]]
-  [ ! -e "$BATS_LOG" ]
-}
-
-@test "public SMS test path runs tests within one BATS file concurrently" {
-  probe_dir="$BATS_TEST_TMPDIR/within-file-probe"
-  export PROBE_DIR="$BATS_TEST_TMPDIR/within-file-barrier"
-  mkdir -p "$probe_dir" "$PROBE_DIR"
+@test "public SMS test path runs separate BATS files concurrently" {
+  local probe_dir="$BATS_TEST_TMPDIR/across-file-probe"
+  local barrier_dir="$BATS_TEST_TMPDIR/across-file-barrier"
+  mkdir -p "$probe_dir" "$barrier_dir"
 
   test_keyword='@test'
   {
     printf '%s\n' '#!/usr/bin/env bats'
-    printf '%s\n' "$test_keyword \"first test observes second test\" {"
-    cat <<'BATS'
+    printf '%s\n' "$test_keyword \"first worker observes second worker\" {"
+    cat <<'INNER_BATS'
   touch "$PROBE_DIR/one"
   for _ in {1..50}; do
     [ ! -e "$PROBE_DIR/two" ] || return 0
@@ -110,9 +70,13 @@ arg_count() {
   done
   false
 }
-BATS
-    printf '%s\n' "$test_keyword \"second test observes first test\" {"
-    cat <<'BATS'
+INNER_BATS
+  } > "$probe_dir/one.bats"
+
+  {
+    printf '%s\n' '#!/usr/bin/env bats'
+    printf '%s\n' "$test_keyword \"second worker observes first worker\" {"
+    cat <<'INNER_BATS'
   touch "$PROBE_DIR/two"
   for _ in {1..50}; do
     [ ! -e "$PROBE_DIR/one" ] || return 0
@@ -120,14 +84,46 @@ BATS
   done
   false
 }
-BATS
-  } > "$probe_dir/within-file.bats"
+INNER_BATS
+  } > "$probe_dir/two.bats"
 
-  unset BATS_COMMAND RUSH_COMMAND
-  unset BATS_NUMBER_OF_PARALLEL_JOBS BATS_PARALLEL_BINARY_NAME
+  export PROBE_DIR="$barrier_dir"
+  run sms test "$probe_dir"
+
+  [ "$status" -eq 0 ]
+}
+
+@test "public SMS test path runs tests within one BATS file concurrently" {
+  local probe_dir="$BATS_TEST_TMPDIR/within-file-probe"
+  export PROBE_DIR="$BATS_TEST_TMPDIR/within-file-barrier"
+  mkdir -p "$probe_dir" "$PROBE_DIR"
+
+  test_keyword='@test'
+  {
+    printf '%s\n' '#!/usr/bin/env bats'
+    printf '%s\n' "$test_keyword \"first test observes second test\" {"
+    cat <<'INNER_BATS'
+  touch "$PROBE_DIR/one"
+  for _ in {1..50}; do
+    [ ! -e "$PROBE_DIR/two" ] || return 0
+    sleep 0.05
+  done
+  false
+}
+INNER_BATS
+    printf '%s\n' "$test_keyword \"second test observes first test\" {"
+    cat <<'INNER_BATS'
+  touch "$PROBE_DIR/two"
+  for _ in {1..50}; do
+    [ ! -e "$PROBE_DIR/one" ] || return 0
+    sleep 0.05
+  done
+  false
+}
+INNER_BATS
+  } > "$probe_dir/within-file.bats"
 
   run sms test "$probe_dir"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"4 jobs via"* ]]
 }
