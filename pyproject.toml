@@ -1,7 +1,11 @@
 [project]
 name = "sms"
 version = "0.1.0"
-requires-python = ">=3.10"
-dependencies = [
-    "slixmpp>=1.8",
-]
+description = "Slurpee galore"
+readme = "README.md"
+authors = [{ name = "Or Ricon", email = "rikonor@gmail.com" }]
+requires-python = ">=3.13"
+dependencies = ["slixmpp>=1.17.0"]
+
+[dependency-groups]
+dev = ["basedpyright>=1.40.2"]

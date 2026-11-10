@@ -11,7 +11,7 @@ import types
 from pathlib import Path
 
 repo = Path(__file__).resolve().parents[1]
-task_path = repo / ".mise" / "tasks" / "listen"
+task_path = repo / "mise-tasks" / "listen.py"
 
 
 async def fake_listen_messages(jid, password, callback, timeout=60, announce=True):

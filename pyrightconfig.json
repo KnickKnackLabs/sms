@@ -1,0 +1,6 @@
+{
+    "include": ["mise-tasks", "lib", "test", "typings"],
+    "exclude": ["**/__pycache__", "**/node_modules", "**/.venv"],
+    "extraPaths": ["lib"],
+    "typeCheckingMode": "recommended",
+}

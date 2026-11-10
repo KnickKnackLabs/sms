@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Lint the project"
+#MISE dir="{{config_root}}"
+exec uv run --locked basedpyright

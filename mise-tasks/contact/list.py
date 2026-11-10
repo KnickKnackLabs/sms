@@ -1,0 +1,34 @@
+#!/usr/bin/env -S uv run --locked python
+# MISE description="List contacts in the XMPP roster"
+# MISE dir="{{config_root}}"
+
+import asyncio
+import os
+import sys
+
+sys.path.insert(0, os.environ["MISE_CONFIG_ROOT"] + "/lib")
+from xmpp import list_contacts
+
+
+def main():
+    jid = os.environ.get("SMS_JID", "")
+    password = os.environ.get("SMS_PASSWORD", "")
+
+    if not jid or not password:
+        print("SMS_JID and SMS_PASSWORD must be set")
+        sys.exit(1)
+
+    contacts = asyncio.run(list_contacts(jid, password))
+
+    if not contacts:
+        print("No contacts")
+
+    else:
+        for c in contacts:
+            sub = c["subscription"]
+            name = f" ({c['name']})" if c["name"] else ""
+            print(f"{c['jid']}{name}  [{sub}]")
+
+
+if __name__ == "__main__":
+    main()

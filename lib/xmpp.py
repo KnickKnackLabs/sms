@@ -2,9 +2,14 @@
 
 import asyncio
 import logging
+from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import datetime, timezone
+from typing import cast
 
 import slixmpp
+from slixmpp.plugins.xep_0203.stanza import Delay
+from slixmpp.plugins.xep_0297.stanza import Forwarded
+from slixmpp.plugins.xep_0313.stanza import MAM
 
 log = logging.getLogger(__name__)
 
@@ -12,286 +17,396 @@ log = logging.getLogger(__name__)
 class SMSClient(slixmpp.ClientXMPP):
     """XMPP client for sending and receiving SMS via jmp.chat."""
 
-    def __init__(self, jid, password):
+    def __init__(self, jid: str, password: str) -> None:
         super().__init__(jid, password)
         self.register_plugin("xep_0030")  # Service Discovery
         self.register_plugin("xep_0313")  # Message Archive Management (MAM)
 
-    async def connect_and_run(self, callback):
+    async def connect_and_run[T](
+        self,
+        callback: Callable[["SMSClient"], Awaitable[T]],
+    ) -> T:
         """Connect, run a callback, then disconnect."""
-        self.connect()
+        _ = self.connect()
+
         try:
             result = await callback(self)
+
         finally:
-            self.disconnect()
+            _ = self.disconnect()
+
         return result
 
 
-async def check_connection(jid, password):
+async def check_connection(jid: str, password: str) -> bool:
     """Verify XMPP credentials by connecting and disconnecting."""
     client = SMSClient(jid, password)
-    connected = asyncio.get_event_loop().create_future()
 
-    def on_session_start(event):
+    connected: asyncio.Future[bool] = asyncio.get_event_loop().create_future()
+
+    def on_session_start(_event: object) -> None:
         connected.set_result(True)
 
-    def on_failed_auth(event):
+    def on_failed_auth(_event: object) -> None:
         if not connected.done():
             connected.set_result(False)
 
     client.add_event_handler("session_start", on_session_start)
     client.add_event_handler("failed_auth", on_failed_auth)
 
-    client.connect()
+    _ = client.connect()
 
     try:
         result = await asyncio.wait_for(connected, timeout=10)
-    except asyncio.TimeoutError:
+
+    except TimeoutError:
         result = False
+
     finally:
-        client.disconnect()
+        _ = client.disconnect()
 
     return result
 
 
-async def send_sms(jid, password, to_number, message):
+async def send_sms(
+    jid: str,
+    password: str,
+    to_number: str,
+    message: str,
+) -> bool:
     """Send an SMS message via jmp.chat.
 
     jmp.chat routes XMPP messages to SMS when sent to <number>@cheogram.com.
     """
-    client = SMSClient(jid, password)
-    sent = asyncio.get_event_loop().create_future()
 
-    def on_session_start(event):
+    client = SMSClient(jid, password)
+    sent: asyncio.Future[bool] = asyncio.get_event_loop().create_future()
+
+    def on_session_start(_event: object) -> None:
         if is_jid(to_number):
             dest_jid = to_number
+
         else:
             dest_jid = normalize_number(to_number) + "@cheogram.com"
-        client.send_message(mto=dest_jid, mbody=message, mtype="chat")
+
+        client.send_message(
+            mto=slixmpp.JID(dest_jid),
+            mbody=message,
+            mtype="chat",
+        )
+
         sent.set_result(True)
 
     client.add_event_handler("session_start", on_session_start)
 
-    client.connect()
+    _ = client.connect()
 
     try:
         result = await asyncio.wait_for(sent, timeout=10)
-    except asyncio.TimeoutError:
+
+    except TimeoutError:
         result = False
+
     finally:
-        client.disconnect()
+        _ = client.disconnect()
 
     return result
 
 
-async def read_messages(jid, password, limit=20):
-    """Read recent messages from the XMPP message archive (MAM)."""
-    client = SMSClient(jid, password)
-    messages = []
-    done = asyncio.get_event_loop().create_future()
+def _messages_from_page(page: slixmpp.Iq) -> list[dict[str, str]]:
+    messages: list[dict[str, str]] = []
+    archive = cast(MAM, page["mam"])
 
-    async def on_session_start(event):
-        try:
-            mam = client.plugin["xep_0313"]
-            iterator = mam.retrieve(
-                rsm={"max": limit},
-                iterator=True,
-                reverse=True,
-            )
-            async for page in iterator:
-                for msg in page["mam"]["results"]:
-                    forwarded = msg["mam_result"]["forwarded"]
-                    message = forwarded["stanza"]
-                    delay = forwarded["delay"]
-                    body = message["body"]
-                    if body:
-                        messages.append({
-                            "from": str(message["from"]),
-                            "to": str(message["to"]),
-                            "body": str(body),
-                            "timestamp": str(delay["stamp"]) if delay["stamp"] else "",
-                        })
-                break  # only need the last page
-        except Exception as e:
-            log.error("Failed to retrieve messages: %s", e)
-        finally:
-            done.set_result(True)
+    for msg in archive.get_results():
+        forwarded = cast(Forwarded, msg["mam_result"]["forwarded"])
+        message = cast(slixmpp.Message, forwarded.get_stanza())
+        delay = cast(Delay, forwarded["delay"])
 
-    client.add_event_handler("session_start", on_session_start)
+        body = cast(str, message["body"])
 
-    client.connect()
+        if not body:
+            continue
 
-    try:
-        await asyncio.wait_for(done, timeout=15)
-    except asyncio.TimeoutError:
-        log.error("Timed out waiting for messages")
-    finally:
-        client.disconnect()
+        stamp = delay.get_stamp()
+
+        messages.append(
+            {
+                "from": str(message.get_from()),
+                "to": str(message.get_to()),
+                "body": body,
+                "timestamp": str(stamp) if stamp else "",
+            }
+        )
 
     return messages
 
 
-async def list_contacts(jid, password):
-    """List all contacts in the XMPP roster."""
+async def read_messages(
+    jid: str,
+    password: str,
+    limit: int = 20,
+) -> list[dict[str, str]]:
+    """Read recent messages from the XMPP message archive (MAM)."""
     client = SMSClient(jid, password)
-    contacts = []
-    done = asyncio.get_event_loop().create_future()
 
-    async def on_session_start(event):
+    messages: list[dict[str, str]] = []
+    done: asyncio.Future[bool] = asyncio.get_event_loop().create_future()
+
+    async def on_session_start(_event: object) -> None:
         try:
-            client.send_presence()
-            await client.get_roster()
-            for rjid in client.client_roster:
-                if rjid == jid:
-                    continue
-                item = client.client_roster[rjid]
-                contacts.append({
-                    "jid": rjid,
-                    "name": item["name"] or "",
-                    "subscription": item["subscription"],
-                })
+            mam = client.plugin["xep_0313"]
+
+            retrieved = mam.retrieve(
+                rsm={"max": limit},
+                iterator=True,
+                reverse=True,
+            )
+
+            iterator = cast(
+                AsyncIterator[slixmpp.Iq],
+                cast(object, retrieved),
+            )
+
+            async for page in iterator:
+                messages.extend(_messages_from_page(page))
+                break  # only need the last page
+
         except Exception as e:
-            log.error("Failed to list contacts: %s", e)
+            log.error("Failed to retrieve messages: %s", e)
+
         finally:
             done.set_result(True)
 
     client.add_event_handler("session_start", on_session_start)
 
-    client.connect()
+    _ = client.connect()
 
     try:
-        await asyncio.wait_for(done, timeout=10)
-    except asyncio.TimeoutError:
-        log.error("Timed out listing contacts")
+        _ = await asyncio.wait_for(done, timeout=15)
+
+    except TimeoutError:
+        log.error("Timed out waiting for messages")
+
     finally:
-        client.disconnect()
+        _ = client.disconnect()
+
+    return messages
+
+
+async def list_contacts(jid: str, password: str) -> list[dict[str, str]]:
+    """List all contacts in the XMPP roster."""
+    client = SMSClient(jid, password)
+    contacts: list[dict[str, str]] = []
+    done: asyncio.Future[bool] = asyncio.get_event_loop().create_future()
+
+    async def on_session_start(_event: object) -> None:
+        try:
+            client.send_presence()
+            _ = await client.get_roster()
+
+            for rjid in client.client_roster:
+                if rjid == jid:
+                    continue
+                item = client.client_roster[rjid]
+                contacts.append(
+                    {
+                        "jid": rjid,
+                        "name": item["name"] or "",
+                        "subscription": item["subscription"],
+                    }
+                )
+
+        except Exception as e:
+            log.error("Failed to list contacts: %s", e)
+
+        finally:
+            done.set_result(True)
+
+    client.add_event_handler("session_start", on_session_start)
+
+    _ = client.connect()
+
+    try:
+        _ = await asyncio.wait_for(done, timeout=10)
+
+    except TimeoutError:
+        log.error("Timed out listing contacts")
+
+    finally:
+        _ = client.disconnect()
 
     return contacts
 
 
-async def add_contact(jid, password, contact_jid):
+async def add_contact(
+    jid: str,
+    password: str,
+    contact_jid: str,
+) -> bool:
     """Add a contact to the XMPP roster and subscribe to their presence."""
     client = SMSClient(jid, password)
-    done = asyncio.get_event_loop().create_future()
+    done: asyncio.Future[bool] = asyncio.get_event_loop().create_future()
 
-    async def on_session_start(event):
+    async def on_session_start(_event: object) -> None:
         try:
             client.send_presence()
-            await client.get_roster()
+            _ = await client.get_roster()
+
             client.send_presence(pto=contact_jid, ptype="subscribe")
             await asyncio.sleep(1)
+
             done.set_result(True)
+
         except Exception as e:
             log.error("Failed to add contact: %s", e)
             done.set_result(False)
 
     client.add_event_handler("session_start", on_session_start)
 
-    client.connect()
+    _ = client.connect()
 
     try:
         result = await asyncio.wait_for(done, timeout=10)
-    except asyncio.TimeoutError:
+
+    except TimeoutError:
         result = False
+
     finally:
-        client.disconnect()
+        _ = client.disconnect()
 
     return result
 
 
-async def listen_messages(jid, password, callback, timeout=60, announce=True):
+async def listen_messages(
+    jid: str,
+    password: str,
+    callback: Callable[[dict[str, str]], None],
+    timeout: float = 60,
+    announce: bool = True,
+) -> None:
     """Connect and listen for incoming messages in real-time."""
     client = SMSClient(jid, password)
 
-    def on_message(msg):
-        if msg["type"] in ("chat", "normal") and msg["body"]:
-            callback({
-                "from": str(msg["from"]),
-                "to": str(msg["to"]),
-                "body": str(msg["body"]),
-            })
+    def on_message(msg: slixmpp.Message) -> None:
+        body = cast(str, msg["body"])
+
+        if msg["type"] in ("chat", "normal") and body:
+            callback(
+                {
+                    "from": str(msg.get_from()),
+                    "to": str(msg.get_to()),
+                    "body": body,
+                }
+            )
 
     client.add_event_handler("message", on_message)
 
-    async def on_session_start(event):
+    async def on_session_start(_event: object) -> None:
         client.send_presence()
-        await client.get_roster()
+        _ = await client.get_roster()
+
         if announce:
-            print(f"Listening ({timeout}s)..." if timeout else "Listening...", flush=True)
+            print(
+                f"Listening ({timeout}s)..." if timeout else "Listening...", flush=True
+            )
 
     client.add_event_handler("session_start", on_session_start)
 
-    client.connect()
+    _ = client.connect()
 
     try:
         if timeout:
             await asyncio.sleep(timeout)
+
         else:
             await asyncio.Future()  # block forever
+
     except (KeyboardInterrupt, asyncio.CancelledError):
         pass
+
     finally:
-        client.disconnect()
+        _ = client.disconnect()
 
 
-async def wait_for_message(jid, password, from_number=None, timeout=300):
+async def wait_for_message(
+    jid: str,
+    password: str,
+    from_number: str | None = None,
+    timeout: float = 300,
+) -> dict[str, str] | None:
     """Wait for a single incoming message, optionally filtered by sender."""
     client = SMSClient(jid, password)
-    result = asyncio.get_event_loop().create_future()
+    result: asyncio.Future[dict[str, str] | None] = (
+        asyncio.get_event_loop().create_future()
+    )
 
-    def on_message(msg):
+    def on_message(msg: slixmpp.Message) -> None:
         if result.done():
             return
-        if msg["type"] not in ("chat", "normal") or not msg["body"]:
+
+        body = cast(str, msg["body"])
+
+        if msg["type"] not in ("chat", "normal") or not body:
             return
-        sender = str(msg["from"])
+
+        sender = str(msg.get_from())
+
         if from_number:
             normalized = normalize_number(from_number)
             sender_local = sender.split("@")[0] if "@" in sender else sender
+
             if sender_local != normalized:
                 return
-        result.set_result({
-            "from": sender,
-            "to": str(msg["to"]),
-            "body": str(msg["body"]),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        })
 
-    def on_failed_auth(event):
+        result.set_result(
+            {
+                "from": sender,
+                "to": str(msg.get_to()),
+                "body": body,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+
+    def on_failed_auth(_event: object) -> None:
         if not result.done():
             result.set_result(None)
 
     client.add_event_handler("message", on_message)
     client.add_event_handler("failed_auth", on_failed_auth)
 
-    async def on_session_start(event):
+    async def on_session_start(_event: object) -> None:
         client.send_presence()
-        await client.get_roster()
+        _ = await client.get_roster()
 
     client.add_event_handler("session_start", on_session_start)
 
-    client.connect()
+    _ = client.connect()
 
     try:
         msg = await asyncio.wait_for(result, timeout=timeout)
         return msg
-    except asyncio.TimeoutError:
+
+    except TimeoutError:
         return None
+
     finally:
-        client.disconnect()
+        _ = client.disconnect()
 
 
-def is_jid(value):
+def is_jid(value: str) -> bool:
     """Check if a value looks like an XMPP JID rather than a phone number."""
     return any(c.isalpha() for c in value)
 
 
-def normalize_number(number):
+def normalize_number(number: str) -> str:
     """Normalize a phone number to digits only with leading +1 if needed."""
     digits = "".join(c for c in number if c.isdigit() or c == "+")
+
     if not digits.startswith("+"):
         if len(digits) == 10:
             digits = "+1" + digits
+
         elif len(digits) == 11 and digits.startswith("1"):
             digits = "+" + digits
+
     return digits

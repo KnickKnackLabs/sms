@@ -1,0 +1,6 @@
+#:schema https://raw.githubusercontent.com/astral-sh/ruff/main/ruff.schema.json
+
+line-length = 80
+
+[lint.isort]
+combine-as-imports = true

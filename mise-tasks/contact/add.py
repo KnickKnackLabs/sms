@@ -1,0 +1,35 @@
+#!/usr/bin/env -S uv run --locked python
+# MISE description="Add a contact to the XMPP roster"
+# MISE dir="{{config_root}}"
+# USAGE arg "<jid>" help="Jabber ID to add (e.g. user@server.com)"
+# USAGE example "mise run contact:add friend@example.com" header="Add an XMPP contact"
+
+import asyncio
+import os
+import sys
+
+sys.path.insert(0, os.environ["MISE_CONFIG_ROOT"] + "/lib")
+from xmpp import add_contact
+
+
+def main():
+    jid = os.environ.get("SMS_JID", "")
+    password = os.environ.get("SMS_PASSWORD", "")
+
+    if not jid or not password:
+        print("SMS_JID and SMS_PASSWORD must be set")
+        sys.exit(1)
+
+    contact_jid = os.environ["usage_jid"]
+
+    ok = asyncio.run(add_contact(jid, password, contact_jid))
+
+    if ok:
+        print(f"Added {contact_jid}")
+    else:
+        print(f"Failed to add {contact_jid}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

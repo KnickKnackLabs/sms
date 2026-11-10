@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#MISE description="Run Python tests"
+#MISE dir="{{config_root}}"
+set -euo pipefail
+
+export PYTHONPATH="${MISE_CONFIG_ROOT}/lib"
+
+exec uv run --locked \
+    python \
+        -m unittest discover -s test

@@ -1,8 +1,6 @@
-#!/usr/bin/env -S uv run --script
-#MISE description="Check MAM (Message Archive Management) status"
-# /// script
-# dependencies = ["slixmpp>=1.8"]
-# ///
+#!/usr/bin/env -S uv run --locked python
+# MISE description="Check MAM (Message Archive Management) status"
+# MISE dir="{{config_root}}"
 
 import asyncio
 import os
@@ -31,13 +29,19 @@ async def check_status():
             ET.SubElement(iq.xml, "{urn:xmpp:mam:2}prefs")
             result = await iq.send()
             prefs = result.xml.find("{urn:xmpp:mam:2}prefs")
-            default = prefs.get("default", "unknown") if prefs is not None else "unknown"
+            default = (
+                prefs.get("default", "unknown") if prefs is not None else "unknown"
+            )
 
             # Check archive metadata
             meta = await client.plugin["xep_0313"].get_archive_metadata()
             meta_el = meta.xml.find("{urn:xmpp:mam:2}metadata")
-            start_el = meta_el.find("{urn:xmpp:mam:2}start") if meta_el is not None else None
-            end_el = meta_el.find("{urn:xmpp:mam:2}end") if meta_el is not None else None
+            start_el = (
+                meta_el.find("{urn:xmpp:mam:2}start") if meta_el is not None else None
+            )
+            end_el = (
+                meta_el.find("{urn:xmpp:mam:2}end") if meta_el is not None else None
+            )
 
             print(f"Archiving: {default}")
             if start_el is not None:

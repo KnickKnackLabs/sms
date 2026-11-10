@@ -1,8 +1,6 @@
-#!/usr/bin/env -S uv run --script
-#MISE description="Enable MAM (Message Archive Management) on the XMPP account"
-# /// script
-# dependencies = ["slixmpp>=1.8"]
-# ///
+#!/usr/bin/env -S uv run --locked python
+# MISE description="Enable MAM (Message Archive Management) on the XMPP account"
+# MISE dir="{{config_root}}"
 
 import asyncio
 import os
@@ -31,7 +29,9 @@ async def enable_archive():
             ET.SubElement(iq_get.xml, "{urn:xmpp:mam:2}prefs")
             result = await iq_get.send()
             prefs = result.xml.find("{urn:xmpp:mam:2}prefs")
-            current = prefs.get("default", "unknown") if prefs is not None else "unknown"
+            current = (
+                prefs.get("default", "unknown") if prefs is not None else "unknown"
+            )
             print(f"Current: {current}")
 
             if current == "always":
