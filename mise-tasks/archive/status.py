@@ -60,7 +60,7 @@ async def check_status():
     client.add_event_handler("session_start", on_start)
     client.connect()
     await asyncio.wait_for(done, timeout=10)
-    client.disconnect()
+    await client.disconnect()
 
 
 asyncio.run(check_status())
