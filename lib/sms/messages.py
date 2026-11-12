@@ -1,4 +1,5 @@
-from collections.abc import AsyncIterator
+import asyncio
+from collections.abc import AsyncGenerator, AsyncIterator
 from dataclasses import dataclass
 from typing import cast, override
 
@@ -7,7 +8,7 @@ from slixmpp import JID, Message as XMPPMessage
 from slixmpp.plugins.xep_0203.stanza import Delay
 from slixmpp.plugins.xep_0297.stanza import Forwarded
 from slixmpp.plugins.xep_0313.stanza import MAM
-from xmpp import XEP_0313, SMSClient
+from xmpp import XEP_0313, SMSClient, XMPPEvent
 
 
 async def send_message(
@@ -106,3 +107,50 @@ def to_message(msg: XMPPMessage) -> Message:
         body=cast(str, msg["body"]),
         timestamp=timestamp,
     )
+
+
+async def listen_for_messages(client: SMSClient) -> AsyncGenerator[Message]:
+    queue: asyncio.Queue[XMPPMessage | None] = asyncio.Queue()
+
+    client.add_event_handler(
+        XMPPEvent.MESSAGE,
+        queue.put_nowait,
+    )
+
+    def on_disconnected(_event: object) -> None:
+        queue.put_nowait(None)
+
+    client.add_event_handler(
+        XMPPEvent.DISCONNECTED,
+        on_disconnected,
+    )
+
+    try:
+        client.send_presence()
+
+        while True:
+            msg = await queue.get()
+
+            if msg is None:
+                raise ConnectionError("XMPP connection closed")
+
+            if msg["type"] not in ("chat", "normal"):
+                continue
+
+            message = to_message(msg)
+
+            if message.is_empty():
+                continue
+
+            yield message
+
+    finally:
+        client.del_event_handler(
+            XMPPEvent.MESSAGE,
+            queue.put_nowait,
+        )
+
+        client.del_event_handler(
+            XMPPEvent.DISCONNECTED,
+            on_disconnected,
+        )
