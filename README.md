@@ -29,7 +29,7 @@ Send and receive SMS through [JMP.chat](https://jmp.chat), which bridges SMS to 
 ![protocol: XMPP](https://img.shields.io/badge/protocol-XMPP-blue?style=flat)
 [![bridge: JMP.chat](https://img.shields.io/badge/bridge-JMP.chat-7c3aed?style=flat)](https://jmp.chat)
 [![library: slixmpp](https://img.shields.io/badge/library-slixmpp-3776AB?style=flat&logo=python&logoColor=white)](https://slixmpp.readthedocs.io)
-![tests: 13 passing](https://img.shields.io/badge/tests-13%20passing-brightgreen?style=flat)
+![tests: 11 passing](https://img.shields.io/badge/tests-11%20passing-brightgreen?style=flat)
 ![lints: 17](https://img.shields.io/badge/lints-17-blue?style=flat)
 ![README: TSX](https://img.shields.io/badge/README-TSX-f472b6?style=flat)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
@@ -62,10 +62,10 @@ shiv install sms
 export SMS_JID="agent@xmpp.chat"
 export SMS_PASSWORD="..."
 
-sms welcome                                  # check connectivity
-sms send +15551234567 "hey, it's junior"     # send
-sms read                                     # recent messages
-sms wait --from +15551234567                 # block until reply
+sms welcome                                          # check connectivity
+sms message send +15551234567 "hey, it's junior"     # send
+sms message read                                     # recent messages
+sms wait --from +15551234567                         # block until reply
 ```
 
 <br />
@@ -99,18 +99,11 @@ JMP treats phone numbers as person-to-person, which sidesteps 10DLC registration
 
 ## Commands
 
-| Command                                             | Description                                                 |
-| --------------------------------------------------- | ----------------------------------------------------------- |
-| `sms archive:enable`                                | Enable MAM (Message Archive Management) on the XMPP account |
-| `sms archive:status`                                | Check MAM (Message Archive Management) status               |
-| `sms contact:add <jid>`                             | Add a contact to the XMPP roster                            |
-| `sms contact:list`                                  | List contacts in the XMPP roster                            |
-| `sms listen --timeout <timeout> --json`             | Listen for incoming messages in real-time                   |
-| `sms read --limit <limit> --json`                   | Read recent SMS messages                                    |
-| `sms send <destination> <message>`                  | Send an SMS message                                         |
-| `sms test [args]`                                   | Run BATS tests                                              |
-| `sms wait --from <from> --timeout <timeout> --json` | Wait for a new SMS message                                  |
-| `sms welcome`                                       | Check SMS connectivity and account status                   |
+| Command           | Description      |
+| ----------------- | ---------------- |
+| `sms dev:lint`    | Lint the project |
+| `sms dev:test`    | Run Python tests |
+| `sms test [args]` | Run BATS tests   |
 
 <br />
 
@@ -177,7 +170,7 @@ readme build --check
 git diff --check
 ```
 
-13 tests using the KKL [BATS fork](https://github.com/KnickKnackLabs/bats-core) and Rush run with four jobs across and within files by default; use `mise run test --jobs 1` for serial debugging. The default suite validates task structure and error handling without requiring live XMPP credentials. See [CONTRIBUTING.md](CONTRIBUTING.md) for local workflow and live-network boundaries.
+11 tests using the KKL [BATS fork](https://github.com/KnickKnackLabs/bats-core) and Rush run with four jobs across and within files by default; use `mise run test --jobs 1` for serial debugging. The default suite validates task structure and error handling without requiring live XMPP credentials. See [CONTRIBUTING.md](CONTRIBUTING.md) for local workflow and live-network boundaries.
 
 <br />
 

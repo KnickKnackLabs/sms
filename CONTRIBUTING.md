@@ -11,7 +11,7 @@ sms/
 ├── README.md              # generated; keep in sync with README.tsx
 ├── CONTRIBUTING.md        # repo orientation surface
 ├── lib/xmpp.py            # shared async XMPP/SMS client logic
-├── .mise/tasks/           # user-facing sms commands
+├── mise-tasks/           # user-facing sms commands
 └── test/                  # BATS tests and helpers
 ```
 

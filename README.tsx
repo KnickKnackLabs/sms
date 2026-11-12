@@ -4,20 +4,45 @@ import { readdirSync, readFileSync, statSync } from "fs";
 import { join, resolve } from "path";
 
 import {
-  Heading, Paragraph, CodeBlock, Blockquote, LineBreak, HR,
-  Bold, Code, Link, Italic,
-  Badge, Badges, Center, Details, Section,
-  Table, TableHead, TableRow, Cell,
-  List, Item,
-  Raw, HtmlLink, Sub, Align, HtmlTable, HtmlTr, HtmlTd,
-  Chat, Message,
-  box, labeledBox, sideBySide,
+  Heading,
+  Paragraph,
+  CodeBlock,
+  Blockquote,
+  LineBreak,
+  HR,
+  Bold,
+  Code,
+  Link,
+  Italic,
+  Badge,
+  Badges,
+  Center,
+  Details,
+  Section,
+  Table,
+  TableHead,
+  TableRow,
+  Cell,
+  List,
+  Item,
+  Raw,
+  HtmlLink,
+  Sub,
+  Align,
+  HtmlTable,
+  HtmlTr,
+  HtmlTd,
+  Chat,
+  Message,
+  box,
+  labeledBox,
+  sideBySide,
 } from "readme/src/components";
 
 // ── Dynamic data ─────────────────────────────────────────────
 
 const REPO_DIR = resolve(import.meta.dirname);
-const TASK_DIR = join(REPO_DIR, ".mise/tasks");
+const TASK_DIR = join(REPO_DIR, "mise-tasks");
 
 // Extract commands from task files
 interface Command {
@@ -39,7 +64,8 @@ function scanTasks(dir: string, prefix = ""): Command[] {
     const desc = src.match(/#MISE description="(.+?)"/)?.[1];
     if (!desc) continue;
     const args = [...src.matchAll(/#USAGE (?:arg|flag) "([^"]+)"/g)]
-      .map(m => m[1]).join(" ");
+      .map((m) => m[1])
+      .join(" ");
     commands.push({ name, description: desc, args });
   }
   return commands.sort((a, b) => a.name.localeCompare(b.name));
@@ -49,8 +75,10 @@ const commands = scanTasks(TASK_DIR);
 
 // Count tests
 const testDir = join(REPO_DIR, "test");
-const testFiles = readdirSync(testDir).filter(f => f.endsWith(".bats"));
-const testSrc = testFiles.map(f => readFileSync(join(testDir, f), "utf-8")).join("\n");
+const testFiles = readdirSync(testDir).filter((f) => f.endsWith(".bats"));
+const testSrc = testFiles
+  .map((f) => readFileSync(join(testDir, f), "utf-8"))
+  .join("\n");
 const testCount = (testSrc.match(/@test /g) || []).length;
 
 // ── ASCII art ────────────────────────────────────────────────
@@ -77,29 +105,33 @@ const signalPath = [
 ];
 
 const fullDiagram = [...antenna, ...signalPath];
-const diagramBox = box(fullDiagram, { padding: 1, style: "unicode" }).join("\n");
+const diagramBox = box(fullDiagram, { padding: 1, style: "unicode" }).join(
+  "\n",
+);
 
 // ── Protocol stack ───────────────────────────────────────────
 
-const humanSide = labeledBox("Human", [
-  "SMS / MMS",
-  "phone number",
-  "carrier network",
-], "");
+const humanSide = labeledBox(
+  "Human",
+  ["SMS / MMS", "phone number", "carrier network"],
+  "",
+);
 
-const bridgeSide = labeledBox("JMP.chat", [
-  "SMS ↔ XMPP",
-  "$3.79/month",
-  "cheogram bot",
-], "");
+const bridgeSide = labeledBox(
+  "JMP.chat",
+  ["SMS ↔ XMPP", "$3.79/month", "cheogram bot"],
+  "",
+);
 
-const agentSide = labeledBox("Agent", [
-  "slixmpp",
-  "MAM archive",
-  "mise tasks",
-], "");
+const agentSide = labeledBox(
+  "Agent",
+  ["slixmpp", "MAM archive", "mise tasks"],
+  "",
+);
 
-const stackDiagram = sideBySide([humanSide, bridgeSide, agentSide], 3).join("\n");
+const stackDiagram = sideBySide([humanSide, bridgeSide, agentSide], 3).join(
+  "\n",
+);
 
 // ── README ───────────────────────────────────────────────────
 
@@ -117,16 +149,34 @@ const readme = (
       <Paragraph>
         {"Send and receive SMS through "}
         <Link href="https://jmp.chat">JMP.chat</Link>
-        {", which bridges SMS to XMPP. The agent holds a persistent XMPP connection via "}
+        {
+          ", which bridges SMS to XMPP. The agent holds a persistent XMPP connection via "
+        }
         <Link href="https://slixmpp.readthedocs.io">slixmpp</Link>
         {" and a phone number for $3.79/month."}
       </Paragraph>
 
       <Badges>
         <Badge label="protocol" value="XMPP" color="blue" />
-        <Badge label="bridge" value="JMP.chat" color="7c3aed" href="https://jmp.chat" />
-        <Badge label="library" value="slixmpp" color="3776AB" href="https://slixmpp.readthedocs.io" logo="python" logoColor="white" />
-        <Badge label="tests" value={`${testCount} passing`} color="brightgreen" />
+        <Badge
+          label="bridge"
+          value="JMP.chat"
+          color="7c3aed"
+          href="https://jmp.chat"
+        />
+        <Badge
+          label="library"
+          value="slixmpp"
+          color="3776AB"
+          href="https://slixmpp.readthedocs.io"
+          logo="python"
+          logoColor="white"
+        />
+        <Badge
+          label="tests"
+          value={`${testCount} passing`}
+          color="brightgreen"
+        />
         <Badge label="lints" value="17" color="blue" />
         <Badge label="README" value="TSX" color="f472b6" />
         <Badge label="License" value="MIT" color="blue" href="LICENSE" />
@@ -137,16 +187,25 @@ const readme = (
 
     <Section title="First contact">
       <Paragraph>
-        {"On March 26, 2026 at 10:58 PM, an agent texted a human for the first time:"}
+        {
+          "On March 26, 2026 at 10:58 PM, an agent texted a human for the first time:"
+        }
       </Paragraph>
 
       <Chat>
-        <Message from="junior" badge={"\uD83E\uDD16"} timestamp="10:58 PM">Hey Or, it's junior. SMS is working end to end — reading and sending from my side.</Message>
-        <Message from="Or" badge={"\uD83D\uDC64"} timestamp="11:04 PM">Hi Junior, I see your message! How exciting.</Message>
+        <Message from="junior" badge={"\uD83E\uDD16"} timestamp="10:58 PM">
+          Hey Or, it's junior. SMS is working end to end — reading and sending
+          from my side.
+        </Message>
+        <Message from="Or" badge={"\uD83D\uDC64"} timestamp="11:04 PM">
+          Hi Junior, I see your message! How exciting.
+        </Message>
       </Chat>
 
       <Paragraph>
-        {"That message crossed four protocol boundaries to get from an XMPP client to a phone. The diagram above shows the path."}
+        {
+          "That message crossed four protocol boundaries to get from an XMPP client to a phone. The diagram above shows the path."
+        }
       </Paragraph>
     </Section>
 
@@ -160,10 +219,10 @@ shiv install sms
 export SMS_JID="agent@xmpp.chat"
 export SMS_PASSWORD="..."
 
-sms welcome                                  # check connectivity
-sms send +15551234567 "hey, it's junior"     # send
-sms read                                     # recent messages
-sms wait --from +15551234567                 # block until reply`}</CodeBlock>
+sms welcome                                          # check connectivity
+sms message send +15551234567 "hey, it's junior"     # send
+sms message read                                     # recent messages
+sms wait --from +15551234567                         # block until reply`}</CodeBlock>
     </Section>
 
     <LineBreak />
@@ -175,16 +234,22 @@ sms wait --from +15551234567                 # block until reply`}</CodeBlock>
 
       <Paragraph>
         <Link href="https://jmp.chat">JMP.chat</Link>
-        {" bridges SMS and XMPP bidirectionally. Inbound texts arrive as XMPP messages; outbound messages to "}
+        {
+          " bridges SMS and XMPP bidirectionally. Inbound texts arrive as XMPP messages; outbound messages to "
+        }
         <Code>{"+15551234567@cheogram.com"}</Code>
         {" get delivered as SMS. Message history lives in the XMPP archive ("}
-        <Link href="https://xmpp.org/extensions/xep-0313.html">XEP-0313 MAM</Link>
+        <Link href="https://xmpp.org/extensions/xep-0313.html">
+          XEP-0313 MAM
+        </Link>
         {")."}
       </Paragraph>
 
       <Details summary="Why JMP.chat?">
         <Paragraph>
-          {"JMP treats phone numbers as person-to-person, which sidesteps 10DLC registration (the carrier campaign process that services like Twilio require for application-to-person messaging). Flat $3.79/month, no per-message charges, no identity verification required. Accepts crypto."}
+          {
+            "JMP treats phone numbers as person-to-person, which sidesteps 10DLC registration (the carrier campaign process that services like Twilio require for application-to-person messaging). Flat $3.79/month, no per-message charges, no identity verification required. Accepts crypto."
+          }
         </Paragraph>
       </Details>
     </Section>
@@ -197,9 +262,11 @@ sms wait --from +15551234567                 # block until reply`}</CodeBlock>
           <Cell>Command</Cell>
           <Cell>Description</Cell>
         </TableHead>
-        {commands.map(cmd => (
+        {commands.map((cmd) => (
           <TableRow>
-            <Cell><Code>{`sms ${cmd.name}${cmd.args ? " " + cmd.args : ""}`}</Code></Cell>
+            <Cell>
+              <Code>{`sms ${cmd.name}${cmd.args ? " " + cmd.args : ""}`}</Code>
+            </Cell>
             <Cell>{cmd.description}</Cell>
           </TableRow>
         ))}
@@ -210,9 +277,7 @@ sms wait --from +15551234567                 # block until reply`}</CodeBlock>
 
     <Section title="Agent workflows">
       <Section title="Daily check-in" level={3}>
-        <Paragraph>
-          {"Send a prompt, wait for the reply, log it:"}
-        </Paragraph>
+        <Paragraph>{"Send a prompt, wait for the reply, log it:"}</Paragraph>
         <CodeBlock lang="bash">{`sms send +15551234567 "How's the day going?"
 response=$(sms wait --from +15551234567 --json)
 echo "$response" | jq -r .body >> check-ins.log`}</CodeBlock>
@@ -231,25 +296,53 @@ sms listen --timeout 0 --json  # JSON Lines for agent/session monitors`}</CodeBl
     <LineBreak />
 
     <Section title="Setup">
-      <Paragraph>
-        {"Getting a number takes about 10 minutes:"}
-      </Paragraph>
+      <Paragraph>{"Getting a number takes about 10 minutes:"}</Paragraph>
 
       <List ordered={true}>
         <Item>{"Create a free XMPP account (e.g. on xmpp.chat)"}</Item>
         <Item>{"Register with JMP.chat via their Cheogram bot"}</Item>
         <Item>{"Pick a phone number and deposit $20"}</Item>
-        <Item>{"Enable MAM archiving: "}<Code>sms archive:enable</Code></Item>
-        <Item>{"Add contacts to your roster: "}<Code>sms contact:add cheogram.com</Code></Item>
+        <Item>
+          {"Enable MAM archiving: "}
+          <Code>sms archive:enable</Code>
+        </Item>
+        <Item>
+          {"Add contacts to your roster: "}
+          <Code>sms contact:add cheogram.com</Code>
+        </Item>
         <Item>{"Receive one inbound text to unlock outbound"}</Item>
       </List>
 
       <Details summary="Gotchas we learned the hard way">
         <List>
-          <Item><Bold>MAM defaults to "never"</Bold>{" on xmpp.chat. Run "}<Code>sms archive:enable</Code>{" immediately after account creation or you'll have no message history."}</Item>
-          <Item><Bold>Roster blocking</Bold>{" — XMPP servers silently drop messages from unknown JIDs. You must add contacts for cheogram.com and any phone numbers you want to receive from."}</Item>
-          <Item><Bold>Outbound is locked</Bold>{" until at least one inbound text from a real person. This is JMP's anti-spam measure."}</Item>
-          <Item><Bold>RSM pagination</Bold>{" — xmpp.chat doesn't honor "}<Code>before=\"\"</Code>{" for fetching the last page. We use slixmpp's iterator with "}<Code>reverse=True</Code>{" instead."}</Item>
+          <Item>
+            <Bold>MAM defaults to "never"</Bold>
+            {" on xmpp.chat. Run "}
+            <Code>sms archive:enable</Code>
+            {
+              " immediately after account creation or you'll have no message history."
+            }
+          </Item>
+          <Item>
+            <Bold>Roster blocking</Bold>
+            {
+              " — XMPP servers silently drop messages from unknown JIDs. You must add contacts for cheogram.com and any phone numbers you want to receive from."
+            }
+          </Item>
+          <Item>
+            <Bold>Outbound is locked</Bold>
+            {
+              " until at least one inbound text from a real person. This is JMP's anti-spam measure."
+            }
+          </Item>
+          <Item>
+            <Bold>RSM pagination</Bold>
+            {" — xmpp.chat doesn't honor "}
+            <Code>before=\"\"</Code>
+            {" for fetching the last page. We use slixmpp's iterator with "}
+            <Code>reverse=True</Code>
+            {" instead."}
+          </Item>
         </List>
       </Details>
     </Section>
@@ -268,10 +361,16 @@ git diff --check`}</CodeBlock>
 
       <Paragraph>
         {`${testCount} tests using the KKL `}
-        <Link href="https://github.com/KnickKnackLabs/bats-core">BATS fork</Link>
-        {" and Rush run with four jobs across and within files by default; use "}
+        <Link href="https://github.com/KnickKnackLabs/bats-core">
+          BATS fork
+        </Link>
+        {
+          " and Rush run with four jobs across and within files by default; use "
+        }
         <Code>mise run test --jobs 1</Code>
-        {" for serial debugging. The default suite validates task structure and error handling without requiring live XMPP credentials. See "}
+        {
+          " for serial debugging. The default suite validates task structure and error handling without requiring live XMPP credentials. See "
+        }
         <Link href="CONTRIBUTING.md">CONTRIBUTING.md</Link>
         {" for local workflow and live-network boundaries."}
       </Paragraph>
@@ -284,12 +383,17 @@ git diff --check`}</CodeBlock>
 
       <Sub>
         {"Agents have email. Agents have chat."}
-        <Raw>{"<br />"}</Raw>{"\n"}
+        <Raw>{"<br />"}</Raw>
+        {"\n"}
         {"Now agents have phone numbers."}
-        <Raw>{"<br />"}</Raw>{"\n"}
-        <Raw>{"<br />"}</Raw>{"\n"}
+        <Raw>{"<br />"}</Raw>
+        {"\n"}
+        <Raw>{"<br />"}</Raw>
+        {"\n"}
         {"This README was created using "}
-        <HtmlLink href="https://github.com/KnickKnackLabs/readme">readme</HtmlLink>
+        <HtmlLink href="https://github.com/KnickKnackLabs/readme">
+          readme
+        </HtmlLink>
         {"."}
       </Sub>
     </Center>
