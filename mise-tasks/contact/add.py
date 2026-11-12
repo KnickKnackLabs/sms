@@ -1,35 +1,56 @@
 #!/usr/bin/env -S uv run --locked python
+#
 # MISE description="Add a contact to the XMPP roster"
 # MISE dir="{{config_root}}"
+#
 # USAGE arg "<jid>" help="Jabber ID to add (e.g. user@server.com)"
-# USAGE example "mise run contact:add friend@example.com" header="Add an XMPP contact"
+# USAGE example "sms contact add friend@example.com" header="Add an XMPP contact"
 
 import asyncio
 import os
 import sys
 
-sys.path.insert(0, os.environ["MISE_CONFIG_ROOT"] + "/lib")
-from xmpp import add_contact
+from duration import SECOND
+from slixmpp import JID
+from sms import wait_ready
+from sms.contacts import add_contact
+from xmpp import SMSClient
 
 
-def main():
-    jid = os.environ.get("SMS_JID", "")
-    password = os.environ.get("SMS_PASSWORD", "")
+async def main() -> None:
+    client = SMSClient(
+        os.environ["SMS_JID"],
+        os.environ["SMS_PASSWORD"],
+    )
 
-    if not jid or not password:
-        print("SMS_JID and SMS_PASSWORD must be set")
+    ready = wait_ready(client)
+
+    try:
+        # Connect
+        async with asyncio.timeout(3 * SECOND):
+            _ = await client.connect()
+            await ready
+
+        # Add contact
+        async with asyncio.timeout(5 * SECOND):
+            contact = await add_contact(
+                client,
+                JID(os.environ["usage_jid"]),
+            )
+
+            print(contact)
+
+    except TimeoutError:
+        print("Timed out", file=sys.stderr)
         sys.exit(1)
 
-    contact_jid = os.environ["usage_jid"]
-
-    ok = asyncio.run(add_contact(jid, password, contact_jid))
-
-    if ok:
-        print(f"Added {contact_jid}")
-    else:
-        print(f"Failed to add {contact_jid}")
+    except PermissionError as error:
+        print(error, file=sys.stderr)
         sys.exit(1)
+
+    finally:
+        await client.disconnect()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
