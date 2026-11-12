@@ -3,7 +3,7 @@
 #MISE dir="{{config_root}}"
 #USAGE arg "[args]" default="" var=#true help="Test files, directories, or BATS arguments"
 #USAGE example "mise run test" header="Run tests concurrently across and within files"
-#USAGE example "mise run test test/sms.bats" header="Run a specific test file"
+#USAGE example "mise run test tests/sms.bats" header="Run a specific test file"
 #USAGE example "mise run test --filter credentials" header="Filter tests by name"
 #USAGE example "mise run test --jobs 1" header="Run serially for debugging"
 set -euo pipefail

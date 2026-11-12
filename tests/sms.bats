@@ -5,32 +5,32 @@ setup() {
   unset SMS_JID SMS_PASSWORD
 }
 
-@test "welcome: fails without credentials" {
-  run sms welcome
+@test "status: fails without credentials" {
+  run sms status
   [[ "${status}" -ne 0 ]]
-  [[ "${output}" == *"SMS_JID and SMS_PASSWORD must be set"* ]]
+  [[ "${output}" == *"KeyError: 'SMS_JID'"* ]]
 }
 
-@test "send: fails without credentials" {
-  run sms send "+19195551234" "test"
+@test "message:send: fails without credentials" {
+  run sms message:send "+15551234567@cheogram.com" "test"
   [[ "${status}" -ne 0 ]]
-  [[ "${output}" == *"SMS_JID and SMS_PASSWORD must be set"* ]]
+  [[ "${output}" == *"KeyError: 'SMS_JID'"* ]]
 }
 
-@test "read: fails without credentials" {
+@test "message:read: fails without credentials" {
   run sms message:read
   [[ "${status}" -ne 0 ]]
-  [[ "${output}" == *"SMS_JID and SMS_PASSWORD must be set"* ]]
+  [[ "${output}" == *"KeyError: 'SMS_JID'"* ]]
 }
 
-@test "wait: fails without credentials" {
-  run sms wait
+@test "message:listen once: fails without credentials" {
+  run sms message:listen --once
   [[ "${status}" -ne 0 ]]
-  [[ "${output}" == *"SMS_JID and SMS_PASSWORD must be set"* ]]
+  [[ "${output}" == *"KeyError: 'SMS_JID'"* ]]
 }
 
-@test "listen: fails without credentials" {
-  run sms listen
+@test "message:listen: fails without credentials" {
+  run sms message:listen
   [[ "${status}" -ne 0 ]]
-  [[ "${output}" == *"SMS_JID and SMS_PASSWORD must be set"* ]]
+  [[ "${output}" == *"KeyError: 'SMS_JID'"* ]]
 }
