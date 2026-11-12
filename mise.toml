@@ -26,4 +26,8 @@ name = "sms"
 lint = ["@all"]
 
 [env]
+# Python
 PYTHONPATH = "{{config_root}}/lib"
+
+# choose an environment (available: macos, strix-halo)
+UV_PROJECT = "{{config_root}}"
