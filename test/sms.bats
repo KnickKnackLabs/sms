@@ -18,7 +18,7 @@ setup() {
 }
 
 @test "read: fails without credentials" {
-  run sms read
+  run sms message:read
   [[ "${status}" -ne 0 ]]
   [[ "${output}" == *"SMS_JID and SMS_PASSWORD must be set"* ]]
 }
