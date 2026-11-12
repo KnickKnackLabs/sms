@@ -1,66 +1,53 @@
 #!/usr/bin/env -S uv run --locked python
+#
 # MISE description="Check MAM (Message Archive Management) status"
 # MISE dir="{{config_root}}"
+#
+# USAGE example "sms archive status"
 
 import asyncio
 import os
 import sys
-from xml.etree import ElementTree as ET
 
-sys.path.insert(0, os.environ["MISE_CONFIG_ROOT"] + "/lib")
-from xmpp import SMSClient
-
-jid = os.environ.get("SMS_JID", "")
-password = os.environ.get("SMS_PASSWORD", "")
-
-if not jid or not password:
-    print("SMS_JID and SMS_PASSWORD must be set")
-    sys.exit(1)
+from duration import SECOND
+from sms import wait_ready
+from sms.archive import archive_status
+from xmpp import XEP_0313, XEP_0441, SMSClient
 
 
-async def check_status():
-    client = SMSClient(jid, password)
-    done = asyncio.get_event_loop().create_future()
+async def main():
+    client = SMSClient(
+        os.environ["SMS_JID"],
+        os.environ["SMS_PASSWORD"],
+    )
 
-    async def on_start(event):
-        try:
-            # Check preference
-            iq = client.make_iq_get(ito=None)
-            ET.SubElement(iq.xml, "{urn:xmpp:mam:2}prefs")
-            result = await iq.send()
-            prefs = result.xml.find("{urn:xmpp:mam:2}prefs")
-            default = (
-                prefs.get("default", "unknown") if prefs is not None else "unknown"
-            )
+    for xep in [XEP_0313, XEP_0441]:
+        client.register_plugin(xep)
 
-            # Check archive metadata
-            meta = await client.plugin["xep_0313"].get_archive_metadata()
-            meta_el = meta.xml.find("{urn:xmpp:mam:2}metadata")
-            start_el = (
-                meta_el.find("{urn:xmpp:mam:2}start") if meta_el is not None else None
-            )
-            end_el = (
-                meta_el.find("{urn:xmpp:mam:2}end") if meta_el is not None else None
-            )
+    ready = wait_ready(client)
 
-            print(f"Archiving: {default}")
-            if start_el is not None:
-                print(f"Oldest:    {start_el.get('timestamp', 'unknown')}")
-            if end_el is not None:
-                print(f"Newest:    {end_el.get('timestamp', 'unknown')}")
-            if start_el is None and end_el is None:
-                print("Archive:   empty")
-        except Exception as e:
-            print(f"Error: {e}")
-            sys.exit(1)
-        finally:
-            if not done.done():
-                done.set_result(True)
+    try:
+        # Connect
+        async with asyncio.timeout(3 * SECOND):
+            _ = await client.connect()
+            await ready
 
-    client.add_event_handler("session_start", on_start)
-    client.connect()
-    await asyncio.wait_for(done, timeout=10)
-    await client.disconnect()
+        # Check archive status
+        async with asyncio.timeout(5 * SECOND):
+            status = await archive_status(client)
+            print(status)
+
+    except TimeoutError:
+        print("Timed out", file=sys.stderr)
+        sys.exit(1)
+
+    except PermissionError as error:
+        print(error, file=sys.stderr)
+        sys.exit(1)
+
+    finally:
+        await client.disconnect()
 
 
-asyncio.run(check_status())
+if __name__ == "__main__":
+    asyncio.run(main())

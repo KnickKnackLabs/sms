@@ -1,61 +1,52 @@
 #!/usr/bin/env -S uv run --locked python
+#
 # MISE description="Enable MAM (Message Archive Management) on the XMPP account"
 # MISE dir="{{config_root}}"
+#
+# USAGE example "sms archive enable"
 
 import asyncio
 import os
 import sys
-from xml.etree import ElementTree as ET
 
-sys.path.insert(0, os.environ["MISE_CONFIG_ROOT"] + "/lib")
-from xmpp import SMSClient
-
-jid = os.environ.get("SMS_JID", "")
-password = os.environ.get("SMS_PASSWORD", "")
-
-if not jid or not password:
-    print("SMS_JID and SMS_PASSWORD must be set")
-    sys.exit(1)
+from duration import SECOND
+from sms import wait_ready
+from sms.archive import enable_preferences
+from xmpp import XEP_0441, SMSClient
 
 
-async def enable_archive():
-    client = SMSClient(jid, password)
-    done = asyncio.get_event_loop().create_future()
+async def main():
+    client = SMSClient(
+        os.environ["SMS_JID"],
+        os.environ["SMS_PASSWORD"],
+    )
 
-    async def on_start(event):
-        try:
-            # Check current preference
-            iq_get = client.make_iq_get(ito=None)
-            ET.SubElement(iq_get.xml, "{urn:xmpp:mam:2}prefs")
-            result = await iq_get.send()
-            prefs = result.xml.find("{urn:xmpp:mam:2}prefs")
-            current = (
-                prefs.get("default", "unknown") if prefs is not None else "unknown"
-            )
-            print(f"Current: {current}")
+    for xep in [XEP_0441]:
+        client.register_plugin(xep)
 
-            if current == "always":
-                print("Already enabled")
-                done.set_result(True)
-                return
+    ready = wait_ready(client)
 
-            # Set to always
-            iq_set = client.make_iq_set(ito=None)
-            prefs_el = ET.SubElement(iq_set.xml, "{urn:xmpp:mam:2}prefs")
-            prefs_el.set("default", "always")
-            await iq_set.send()
-            print("Set to: always")
-        except Exception as e:
-            print(f"Error: {e}")
-            sys.exit(1)
-        finally:
-            if not done.done():
-                done.set_result(True)
+    try:
+        # Connect
+        async with asyncio.timeout(3 * SECOND):
+            _ = await client.connect()
+            await ready
 
-    client.add_event_handler("session_start", on_start)
-    client.connect()
-    await asyncio.wait_for(done, timeout=10)
-    await client.disconnect()
+        # Enable Preferences
+        async with asyncio.timeout(5 * SECOND):
+            _ = await enable_preferences(client)
+
+    except TimeoutError:
+        print("Timed out", file=sys.stderr)
+        sys.exit(1)
+
+    except PermissionError as error:
+        print(error, file=sys.stderr)
+        sys.exit(1)
+
+    finally:
+        await client.disconnect()
 
 
-asyncio.run(enable_archive())
+if __name__ == "__main__":
+    asyncio.run(main())
